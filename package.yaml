@@ -1,0 +1,97 @@
+name: sortation
+
+version: 0.0.0.0
+
+license-file: LICENSE
+
+executables:
+  sortation:
+    main: Main.hs
+    source-dirs: src
+
+dependencies:
+  - base >= 4.14 && < 5
+  - bytestring
+  - conduit
+  - conduit-concurrent-map
+  - cryptohash-md5
+  - cryptohash-sha1
+  - digest
+  - exceptions
+  - generic-data
+  - hex-text
+  - largeword
+  - mtl
+  - optics
+  - optparse-applicative
+  - pathtype
+  - pretty-simple
+  - resourcet
+  - text
+  - unliftio-core
+  - xml-conduit
+  - xml-types
+
+ghc-options:
+  - -fdefer-typed-holes
+  - -Wall
+  - -Wcompat
+  - -Wincomplete-patterns
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wredundant-constraints
+  - -O2
+  - -threaded
+
+default-extensions:
+  - AllowAmbiguousTypes
+  - ApplicativeDo
+  - BangPatterns
+  - BlockArguments
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveFoldable
+  - DeriveFunctor
+  - DeriveGeneric
+  - DeriveLift
+  - DeriveTraversable
+  - DerivingStrategies
+  - DerivingVia
+  - DuplicateRecordFields
+  - EmptyCase
+  - ExistentialQuantification
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - GeneralizedNewtypeDeriving
+  - ImportQualifiedPost
+  - InstanceSigs
+  - KindSignatures
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoStarIsType
+  - OverloadedLabels
+  - OverloadedLists
+  - OverloadedStrings
+  - PartialTypeSignatures
+  - PatternSynonyms
+  - PolyKinds
+  - QuantifiedConstraints
+  - RankNTypes
+  - RecordWildCards
+  - RoleAnnotations
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - StandaloneKindSignatures
+  - TemplateHaskell
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeFamilyDependencies
+  - TypeOperators
+  - UndecidableInstances
+  - ViewPatterns

@@ -1,0 +1,100 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.4.
+--
+-- see: https://github.com/sol/hpack
+
+name:           sortation
+version:        0.0.0.0
+license:        GPL-3
+license-file:   LICENSE
+build-type:     Simple
+
+executable sortation
+  main-is: Main.hs
+  other-modules:
+      Sortation.Check
+      Sortation.Config
+      Sortation.Hash
+      Sortation.Process
+      Text.Dat
+      Text.Dat.Parse
+      Paths_sortation
+  hs-source-dirs:
+      src
+  default-extensions:
+      AllowAmbiguousTypes
+      ApplicativeDo
+      BangPatterns
+      BlockArguments
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveLift
+      DeriveTraversable
+      DerivingStrategies
+      DerivingVia
+      DuplicateRecordFields
+      EmptyCase
+      ExistentialQuantification
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      GeneralizedNewtypeDeriving
+      ImportQualifiedPost
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoStarIsType
+      OverloadedLabels
+      OverloadedLists
+      OverloadedStrings
+      PartialTypeSignatures
+      PatternSynonyms
+      PolyKinds
+      QuantifiedConstraints
+      RankNTypes
+      RecordWildCards
+      RoleAnnotations
+      ScopedTypeVariables
+      StandaloneDeriving
+      StandaloneKindSignatures
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeFamilyDependencies
+      TypeOperators
+      UndecidableInstances
+      ViewPatterns
+  ghc-options: -fdefer-typed-holes -Wall -Wcompat -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded
+  build-depends:
+      base >=4.14 && <5
+    , bytestring
+    , conduit
+    , conduit-concurrent-map
+    , cryptohash-md5
+    , cryptohash-sha1
+    , digest
+    , exceptions
+    , generic-data
+    , hex-text
+    , largeword
+    , mtl
+    , optics
+    , optparse-applicative
+    , pathtype
+    , pretty-simple
+    , resourcet
+    , text
+    , unliftio-core
+    , xml-conduit
+    , xml-types
+  default-language: Haskell2010
