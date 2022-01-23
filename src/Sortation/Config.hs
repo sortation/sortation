@@ -25,21 +25,6 @@ data FlattenOption
   | FlattenNever
   deriving (Generic, Eq, Ord, Show)
 
-defaultConfig :: Config
-defaultConfig = Config
-  -- currentDir <- makeAbsoluteFromCwd (relDir ".")
-  { bufferSize = 1
-  , threadCount = 1
-  , romDirectory = "."
-  , checkConfig = CheckConfig
-    { crc = True
-    , sha1 = True
-    , md5 = True
-    -- , datLog = currentDir </> relFile "report.txt"
-    , flatten = FlattenSingle
-    }
-  }
-
 optionsParser :: ParserInfo Config
 optionsParser =
   info (configParser <**> helper) $ mconcat
@@ -71,6 +56,7 @@ configParser = do
       , help "absolute base directory where games/roms are located"
       , showDefault
       , metavar "DIR"
+      , action "directory"
       , value "."
       ]
   checkConfig <- checkConfigParser
