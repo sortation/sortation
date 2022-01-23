@@ -4,7 +4,6 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Resource
 import Data.Conduit
 import Data.Conduit.Combinators qualified as Conduit
-import Optics
 import Options.Applicative
 import Sortation.Check
 import Sortation.Config
@@ -15,10 +14,7 @@ main :: IO ()
 main = do
   config <- execParser optionsParser
   runResourceT $
-    flip runReaderT
-      ( config
-          & #romDirectory .~ "/data/serving/software/no-intro/Tiger - Game.com"
-      ) $
+    flip runReaderT config $
     runConduit $
       Conduit.sourceFile "/data/serving/software/dats/Tiger - Game.com (20081125-110950).dat"
         .| XML.parseBytes def
