@@ -8,6 +8,7 @@ import Control.Monad.Trans.Resource
 import Data.ByteString (ByteString)
 import Data.Conduit
 import Data.Conduit.Combinators qualified as Conduit
+import Data.Conduit.ConcurrentMap
 import Data.Conduit.Lift
 import Data.List qualified as List
 import Data.Maybe
@@ -21,7 +22,6 @@ import GHC.Natural
 import Optics
 import Sortation.Config
 import Sortation.Hash
-import Sortation.Process
 import System.Path as Path
 import System.Path.Directory
 import System.Path.IO
@@ -51,11 +51,12 @@ newlines = Text.unlines . flip List.genericReplicate ""
 
 reportDat ::
   (MonadReader CheckConfig m, MonadUnliftIO m, MonadResource m) =>
-  ConduitT Game ByteString (HeaderT m) ()
-reportDat = datText .| Conduit.map Text.encodeUtf8
+  Maybe Header ->
+  ConduitT Game ByteString m ()
+reportDat header = datText .| Conduit.map Text.encodeUtf8
   where
     datText = do
-      traverse (yield . prettyHeader) =<< lift askHeader
+      traverse (yield . prettyHeader) header
       yield $ newlines 3
       dat <- checkDat `fuseUpstream` Conduit.map (uncurry prettyGame)
       yield $ newlines 1
@@ -94,9 +95,11 @@ prettyRom name rom =
 checkDat ::
   (MonadReader CheckConfig m, MonadUnliftIO m, MonadResource m) =>
   ConduitT Game (Text, GameReport) m DatReport
-checkDat =
-  processDat checkGame
-    .| execStateC mempty (Conduit.iterM (modify . mappend . gameDat . snd))
+checkDat = do
+  threadCount <- gviews (globalConfigL % #threadCount) fromIntegral
+  bufferSize <- gviews (globalConfigL % #bufferSize) fromIntegral
+  concurrentMapM_ threadCount bufferSize checkGame .|
+    execStateC mempty (Conduit.iterM (modify . mappend . gameDat . snd))
 
 gameDat :: GameReport -> DatReport
 gameDat game =

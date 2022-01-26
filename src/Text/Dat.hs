@@ -13,26 +13,6 @@ import GHC.Generics
 import GHC.Natural
 import Optics
 
-type HeaderT :: (Type -> Type) -> Type -> Type
-newtype HeaderT m a = HeaderT { runHeaderT :: Maybe Header -> m a }
-  deriving
-    ( Functor, Applicative, Monad
-    , MonadThrow, MonadIO, MonadUnliftIO, MonadResource
-    ) via ReaderT (Maybe Header) m
-  deriving
-    ( MonadTrans
-    ) via ReaderT (Maybe Header)
-
-instance MonadReader r m => MonadReader r (HeaderT m) where
-  ask = lift ask
-  local f = HeaderT . fmap (local f) . runHeaderT
-
-askHeader :: Applicative m => HeaderT m (Maybe Header)
-askHeader = HeaderT pure
-
-runHeaderC :: Monad m => Maybe Header -> ConduitT i o (HeaderT m) r -> ConduitT i o m r
-runHeaderC h = transPipe (($ h) . runHeaderT)
-
 data Header = Header
   { name :: Text
   , description :: Text

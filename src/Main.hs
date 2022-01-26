@@ -20,5 +20,5 @@ main = do
         Check c ->
           Conduit.sourceFile (c ^. #globalConfig % #datFile)
             .| XML.parseBytes def
-            .| runReaderC c (parseDat' reportDat)
+            .| runReaderC c (parseDat reportDat)
             .| Conduit.stdout

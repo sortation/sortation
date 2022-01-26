@@ -14,9 +14,9 @@ executable sortation
   main-is: Main.hs
   other-modules:
       Sortation.Check
+      Sortation.Collect
       Sortation.Config
       Sortation.Hash
-      Sortation.Process
       Text.Dat
       Text.Dat.Parse
       Paths_sortation
