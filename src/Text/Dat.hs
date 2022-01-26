@@ -1,11 +1,6 @@
 module Text.Dat where
 
-import Control.Monad.IO.Unlift
-import Control.Monad.Reader
-import Control.Monad.Trans.Resource
 import Data.ByteString (ByteString)
-import Data.Conduit
-import Data.Kind
 import Data.LargeWord
 import Data.Text (Text)
 import Data.Word

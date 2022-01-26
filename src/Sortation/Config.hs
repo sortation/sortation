@@ -2,7 +2,6 @@ module Sortation.Config where
 
 import GHC.Generics
 import GHC.Natural
-import Optics
 import Options.Applicative
 import System.IO qualified as System
 
@@ -13,9 +12,6 @@ data GlobalConfig = GlobalConfig
   , datFile :: System.FilePath
   } deriving (Generic, Eq, Ord, Show)
 
-class HasGlobalConfig c where
-  globalConfigL :: Lens' c GlobalConfig
-
 data HashConfig = HashConfig
   { crc :: Bool
   , sha1 :: Bool
@@ -25,26 +21,11 @@ data HashConfig = HashConfig
 data CommandConfig
   = Check CheckConfig
 
-instance HasGlobalConfig CommandConfig where
-  globalConfigL =
-    lens
-      do
-        \case
-          Check config -> config ^. #globalConfig
-      do
-        \case
-          Check config -> Check . flip (set #globalConfig) config
-
 data CheckConfig = CheckConfig
-  { crc :: Bool
-  , sha1 :: Bool
-  , md5 :: Bool
+  { hashConfig :: HashConfig
   , flatten :: FlattenOption
   , globalConfig :: GlobalConfig
   } deriving (Generic, Eq, Ord, Show)
-
-instance HasGlobalConfig CheckConfig where
-  globalConfigL = #globalConfig
 
 data FlattenOption
   = FlattenAlways
@@ -120,6 +101,7 @@ configParser = do
       ]
   pure $ Check CheckConfig
     { globalConfig = GlobalConfig { .. }
+    , hashConfig = HashConfig { .. }
     , ..
     }
 

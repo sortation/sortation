@@ -96,8 +96,8 @@ checkDat ::
   (MonadReader CheckConfig m, MonadUnliftIO m, MonadResource m) =>
   ConduitT Game (Text, GameReport) m DatReport
 checkDat = do
-  threadCount <- gviews (globalConfigL % #threadCount) fromIntegral
-  bufferSize <- gviews (globalConfigL % #bufferSize) fromIntegral
+  threadCount <- gviews (#globalConfig % #threadCount) fromIntegral
+  bufferSize <- gviews (#globalConfig % #bufferSize) fromIntegral
   concurrentMapM_ threadCount bufferSize checkGame .|
     execStateC mempty (Conduit.iterM (modify . mappend . gameDat . snd))
 
@@ -130,7 +130,9 @@ checkRom ::
   (MonadIO m, MonadReader CheckConfig m) =>
   Rom -> m (Text, Maybe RomReport)
 checkRom rom = do
-  romDirectory <- liftIO . Path.dynamicMakeAbsoluteFromCwd . Path.absRel =<< gview (globalConfigL % #romDirectory)
+  romDirectory <-
+    liftIO . Path.dynamicMakeAbsoluteFromCwd . Path.absRel =<<
+      gview (#globalConfig % #romDirectory)
   let romFile = romDirectory </> relFile (Text.unpack (rom ^. #name))
   liftIO (doesFileExist romFile) >>= fmap (rom ^. #name,) . \case
     False -> pure Nothing
@@ -138,7 +140,8 @@ checkRom rom = do
       h <- liftIO $ openFile romFile ReadMode
       fileSize <- liftIO $ hFileSize h
       let size = toInteger (rom ^. #size) == fileSize
-      hashes <- runConduit (hashFile h)
+      hashConfig <- gview #hashConfig
+      hashes <- runConduit (hashFile hashConfig h)
       liftIO $ hClose h
       let crc = liftA2 (==) (rom ^. #crc) (hashes ^. #crc)
       let sha1 = liftA2 (==) (rom ^. #sha1) (hashes ^. #sha1)

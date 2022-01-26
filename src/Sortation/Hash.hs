@@ -1,10 +1,9 @@
 module Sortation.Hash where
 
+import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Reader
 import Crypto.Hash.MD5 qualified as MD5
 import Crypto.Hash.SHA1 qualified as SHA1
-import Data.Bool
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as ByteString
 import Data.Conduit
@@ -28,21 +27,19 @@ data Hash = Hash
   , md5 :: Maybe ByteString
   } deriving (Generic, Eq)
 
-hashFile ::
-  (MonadIO m, MonadReader CheckConfig m) =>
-  Handle ->
-  ConduitT i o m Hash
-hashFile h = 
+hashFile :: MonadIO m => HashConfig -> Handle -> ConduitT i o m Hash
+hashFile config h = 
   fmap finalizeHashState $
-    Conduit.sourceHandle h .| do
-      Conduit.foldl updateHashState =<< initHashState
+    Conduit.sourceHandle h .|
+      Conduit.foldl updateHashState (initHashState config)
 
-initHashState :: MonadReader CheckConfig m => m HashState
-initHashState = do
-  crc <- bool Nothing (Just (crc32 ByteString.empty)) <$> gview #crc
-  sha1 <- bool Nothing (Just SHA1.init) <$> gview #sha1
-  md5 <- bool Nothing (Just MD5.init) <$> gview #md5
-  pure HashState { .. }
+initHashState :: HashConfig -> HashState
+initHashState config =
+  HashState
+    { crc = crc32 ByteString.empty <$ guard (config ^. #crc)
+    , sha1 = SHA1.init <$ guard (config ^. #sha1)
+    , md5 = MD5.init <$ guard (config ^. #md5)
+    }
 
 updateHashState :: HashState -> ByteString -> HashState
 updateHashState hash bytes =
