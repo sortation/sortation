@@ -10,10 +10,12 @@ import Sortation.Config
 import Text.Dat
 
 processDat ::
-  (MonadReader Config m, MonadUnliftIO m, MonadResource m) =>
+  ( MonadReader c m, MonadUnliftIO m, MonadResource m
+  , HasGlobalConfig c
+  ) =>
   (Game -> m o) ->
   ConduitT Game o m ()
 processDat processGame = do
-  threadCount <- gviews #threadCount fromIntegral
-  bufferSize <- gviews #bufferSize fromIntegral
+  threadCount <- gviews (globalConfigL % #threadCount) fromIntegral
+  bufferSize <- gviews (globalConfigL % #bufferSize) fromIntegral
   concurrentMapM_ threadCount bufferSize processGame

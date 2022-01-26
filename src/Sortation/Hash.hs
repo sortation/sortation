@@ -29,7 +29,7 @@ data Hash = Hash
   } deriving (Generic, Eq)
 
 hashFile ::
-  (MonadIO m, MonadReader Config m) =>
+  (MonadIO m, MonadReader CheckConfig m) =>
   Handle ->
   ConduitT i o m Hash
 hashFile h = 
@@ -37,11 +37,11 @@ hashFile h =
     Conduit.sourceHandle h .| do
       Conduit.foldl updateHashState =<< initHashState
 
-initHashState :: MonadReader Config m => m HashState
+initHashState :: MonadReader CheckConfig m => m HashState
 initHashState = do
-  crc <- bool Nothing (Just (crc32 ByteString.empty)) <$> gview (#checkConfig % #crc)
-  sha1 <- bool Nothing (Just SHA1.init) <$> gview (#checkConfig % #sha1)
-  md5 <- bool Nothing (Just MD5.init) <$> gview (#checkConfig % #md5)
+  crc <- bool Nothing (Just (crc32 ByteString.empty)) <$> gview #crc
+  sha1 <- bool Nothing (Just SHA1.init) <$> gview #sha1
+  md5 <- bool Nothing (Just MD5.init) <$> gview #md5
   pure HashState { .. }
 
 updateHashState :: HashState -> ByteString -> HashState

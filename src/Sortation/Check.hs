@@ -50,7 +50,7 @@ newlines :: Natural -> Text
 newlines = Text.unlines . flip List.genericReplicate ""
 
 reportDat ::
-  (MonadReader Config m, MonadUnliftIO m, MonadResource m) =>
+  (MonadReader CheckConfig m, MonadUnliftIO m, MonadResource m) =>
   ConduitT Game ByteString (HeaderT m) ()
 reportDat = datText .| Conduit.map Text.encodeUtf8
   where
@@ -92,7 +92,7 @@ prettyRom name rom =
     ]
 
 checkDat ::
-  (MonadReader Config m, MonadUnliftIO m, MonadResource m) =>
+  (MonadReader CheckConfig m, MonadUnliftIO m, MonadResource m) =>
   ConduitT Game (Text, GameReport) m DatReport
 checkDat =
   processDat checkGame
@@ -117,17 +117,17 @@ goodRom =
     ]
 
 checkGame ::
-  (MonadIO m, MonadReader Config m) =>
+  (MonadIO m, MonadReader CheckConfig m) =>
   Game -> m (Text, GameReport)
 checkGame game = do
   romReports <- traverse checkRom (game ^. #roms)
   pure (game ^. #name, GameReport { .. })
 
 checkRom ::
-  (MonadIO m, MonadReader Config m) =>
+  (MonadIO m, MonadReader CheckConfig m) =>
   Rom -> m (Text, Maybe RomReport)
 checkRom rom = do
-  romDirectory <- liftIO . Path.dynamicMakeAbsoluteFromCwd . Path.absRel =<< gview #romDirectory
+  romDirectory <- liftIO . Path.dynamicMakeAbsoluteFromCwd . Path.absRel =<< gview (globalConfigL % #romDirectory)
   let romFile = romDirectory </> relFile (Text.unpack (rom ^. #name))
   liftIO (doesFileExist romFile) >>= fmap (rom ^. #name,) . \case
     False -> pure Nothing

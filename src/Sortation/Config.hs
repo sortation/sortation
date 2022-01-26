@@ -2,23 +2,49 @@ module Sortation.Config where
 
 import GHC.Generics
 import GHC.Natural
+import Optics
 import Options.Applicative
 import System.IO qualified as System
 
-data Config = Config
+data GlobalConfig = GlobalConfig
   { bufferSize :: Natural
   , threadCount :: Natural
   , romDirectory :: System.FilePath
   , datFile :: System.FilePath
-  , checkConfig :: CheckConfig
   } deriving (Generic, Eq, Ord, Show)
+
+class HasGlobalConfig c where
+  globalConfigL :: Lens' c GlobalConfig
+
+data HashConfig = HashConfig
+  { crc :: Bool
+  , sha1 :: Bool
+  , md5 :: Bool
+  } deriving (Generic, Eq, Ord, Show)
+
+data CommandConfig
+  = Check CheckConfig
+
+instance HasGlobalConfig CommandConfig where
+  globalConfigL =
+    lens
+      do
+        \case
+          Check config -> config ^. #globalConfig
+      do
+        \case
+          Check config -> Check . flip (set #globalConfig) config
 
 data CheckConfig = CheckConfig
   { crc :: Bool
   , sha1 :: Bool
   , md5 :: Bool
   , flatten :: FlattenOption
+  , globalConfig :: GlobalConfig
   } deriving (Generic, Eq, Ord, Show)
+
+instance HasGlobalConfig CheckConfig where
+  globalConfigL = #globalConfig
 
 data FlattenOption
   = FlattenAlways
@@ -26,14 +52,14 @@ data FlattenOption
   | FlattenNever
   deriving (Generic, Eq, Ord, Show)
 
-optionsParser :: ParserInfo Config
+optionsParser :: ParserInfo CommandConfig
 optionsParser =
   info (configParser <**> helper) $ mconcat
     [ fullDesc
     , header "sortation"
     ]
 
-configParser :: Parser Config
+configParser :: Parser CommandConfig
 configParser = do
   bufferSize <-
     option auto $ mconcat
@@ -60,17 +86,6 @@ configParser = do
       , action "directory"
       , value "."
       ]
-  checkConfig <- checkConfigParser
-  datFile <-
-    argument str $ mconcat
-      [ help "dat file to process"
-      , metavar "DAT"
-      , action "file"
-      ]
-  pure Config { .. }
-
-checkConfigParser :: Parser CheckConfig
-checkConfigParser = do
   crc <-
     flag True False $ mconcat
       [ long "disable-crc", short 'c'
@@ -97,7 +112,16 @@ checkConfigParser = do
       , completeWith ["always", "single", "never"]
       , value FlattenSingle
       ]
-  pure CheckConfig { .. }
+  datFile <-
+    argument str $ mconcat
+      [ help "dat file to process"
+      , metavar "DAT"
+      , action "file"
+      ]
+  pure $ Check CheckConfig
+    { globalConfig = GlobalConfig { .. }
+    , ..
+    }
 
 readFlattenOption :: ReadM FlattenOption
 readFlattenOption =
