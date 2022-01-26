@@ -4,6 +4,7 @@ import Control.Monad.Reader
 import Control.Monad.Trans.Resource
 import Data.Conduit
 import Data.Conduit.Combinators qualified as Conduit
+import Optics
 import Options.Applicative
 import Sortation.Check
 import Sortation.Config
@@ -16,7 +17,7 @@ main = do
   runResourceT $
     flip runReaderT config $
     runConduit $
-      Conduit.sourceFile "/data/serving/software/dats/Tiger - Game.com (20081125-110950).dat"
+      Conduit.sourceFile (config ^. #datFile)
         .| XML.parseBytes def
         .| parseDat' reportDat
         .| Conduit.stdout

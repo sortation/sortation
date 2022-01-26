@@ -9,6 +9,7 @@ data Config = Config
   { bufferSize :: Natural
   , threadCount :: Natural
   , romDirectory :: System.FilePath
+  , datFile :: System.FilePath
   , checkConfig :: CheckConfig
   } deriving (Generic, Eq, Ord, Show)
 
@@ -60,6 +61,12 @@ configParser = do
       , value "."
       ]
   checkConfig <- checkConfigParser
+  datFile <-
+    argument str $ mconcat
+      [ help "dat file to process"
+      , metavar "DAT"
+      , action "file"
+      ]
   pure Config { .. }
 
 checkConfigParser :: Parser CheckConfig
