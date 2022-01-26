@@ -17,12 +17,15 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Text.Lazy qualified as Text (toStrict)
+import Data.Traversable
 import Generic.Data
 import GHC.Natural
 import Optics
 import Sortation.Config
 import Sortation.Hash
-import System.Path as Path
+import System.Path ((</>), relFile, relDir)
+import System.Path qualified as Path
+import System.Path.Part
 import System.Path.Directory
 import System.Path.IO
 import Text.Dat
@@ -106,7 +109,7 @@ gameDat game =
   let roms = game ^. #romReports % mapping _2 in
     DatReport
       { total = 1
-      , missing = if all (== Nothing) roms then 1 else 0
+      , missing = if any (== Nothing) roms then 1 else 0
       , broken = if all goodRom roms then 0 else 1
       }
 
@@ -126,14 +129,28 @@ checkGame game = do
   romReports <- traverse checkRom (game ^. #roms)
   pure (game ^. #name, GameReport { .. })
 
+resolveRomPaths ::
+  (MonadIO m, MonadReader CheckConfig m) =>
+  FlattenOption ->
+  Game ->
+  m [(Path.AbsFile, Rom)]
+resolveRomPaths opt game =
+  for (game ^. #roms) \rom -> do
+    gameDir <- parsePath @Dir =<< gview (#globalConfig % #gameDirectory)
+    let romDir = Path.makeAbsolute gameDir $ relDir (Text.unpack (game ^. #name))
+    pure $ (,rom) $ relFile (Text.unpack (game ^. #name)) & Path.makeAbsolute
+      case opt of
+        FlattenAlways -> gameDir
+        FlattenSingle | length (game ^. #roms) == 1 -> gameDir
+        FlattenSingle -> romDir
+        FlattenNever -> romDir
+
 checkRom ::
   (MonadIO m, MonadReader CheckConfig m) =>
   Rom -> m (Text, Maybe RomReport)
 checkRom rom = do
-  romDirectory <-
-    liftIO . Path.dynamicMakeAbsoluteFromCwd . Path.absRel =<<
-      gview (#globalConfig % #romDirectory)
-  let romFile = romDirectory </> relFile (Text.unpack (rom ^. #name))
+  gameDirectory <- parsePath @Dir =<< gview (#globalConfig % #gameDirectory)
+  let romFile = gameDirectory </> relFile (Text.unpack (rom ^. #name))
   liftIO (doesFileExist romFile) >>= fmap (rom ^. #name,) . \case
     False -> pure Nothing
     True -> do

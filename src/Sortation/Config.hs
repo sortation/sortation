@@ -1,14 +1,24 @@
 module Sortation.Config where
 
+import Control.Monad.IO.Class
 import GHC.Generics
 import GHC.Natural
 import Options.Applicative
 import System.IO qualified as System
+import System.Path qualified as Path
+import System.Path.PartClass qualified as Path.PartClass
+
+parsePath ::
+  forall fd m.
+  (MonadIO m, Path.PartClass.FileDir fd) =>
+  System.FilePath ->
+  m (Path.Abs fd)
+parsePath = liftIO . Path.dynamicMakeAbsoluteFromCwd . Path.absRel @fd
 
 data GlobalConfig = GlobalConfig
   { bufferSize :: Natural
   , threadCount :: Natural
-  , romDirectory :: System.FilePath
+  , gameDirectory :: System.FilePath
   , datFile :: System.FilePath
   } deriving (Generic, Eq, Ord, Show)
 
@@ -58,7 +68,7 @@ configParser = do
       , metavar "NUM"
       , value 1
       ]
-  romDirectory <-
+  gameDirectory <-
     strOption $ mconcat
       [ long "rom-directory", short 'd'
       , help "absolute base directory where games/roms are located"
