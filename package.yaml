@@ -25,6 +25,9 @@ dependencies:
   - optics
   - optparse-applicative
   - pathtype
+  - persistent
+  - persistent-sqlite
+  - persistent-template
   - pretty-simple
   - resourcet
   - text
