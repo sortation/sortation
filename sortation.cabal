@@ -17,6 +17,15 @@ executable sortation
       Sortation.Collect
       Sortation.Config
       Sortation.Hash
+      Sortation.Ingest.Dat
+      Sortation.Persistent
+      Sortation.Persistent.Collection
+      Sortation.Persistent.Game
+      Sortation.Persistent.Quasi
+      Sortation.Persistent.Release
+      Sortation.Persistent.Rom
+      Sortation.Report.Config
+      Sortation.Report.Text
       Text.Dat
       Text.Dat.Parse
       Paths_sortation
@@ -30,6 +39,7 @@ executable sortation
       ConstraintKinds
       DataKinds
       DefaultSignatures
+      DeriveAnyClass
       DeriveFoldable
       DeriveFunctor
       DeriveGeneric
@@ -60,6 +70,7 @@ executable sortation
       PatternSynonyms
       PolyKinds
       QuantifiedConstraints
+      QuasiQuotes
       RankNTypes
       RecordWildCards
       RoleAnnotations
@@ -76,28 +87,44 @@ executable sortation
       ViewPatterns
   ghc-options: -fdefer-typed-holes -Wall -Wcompat -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded
   build-depends:
-      base >=4.14 && <5
+      adjunctions
+    , base >=4.14 && <5
     , bytestring
     , conduit
     , conduit-concurrent-map
+    , containers
     , cryptohash-md5
     , cryptohash-sha1
     , digest
     , exceptions
+    , finite-typelits
     , generic-data
     , hex-text
     , largeword
+    , monad-control
+    , monad-logger
     , mtl
     , optics
     , optparse-applicative
     , pathtype
     , persistent
+    , persistent-mtl
+    , persistent-pagination
     , persistent-sqlite
-    , persistent-template
     , pretty-simple
+    , primitive
+    , resource-pool
     , resourcet
+    , template-haskell
     , text
+    , time
+    , transformers-base
     , unliftio-core
+    , unordered-containers
+    , uuid
+    , vector
+    , vector-algorithms
+    , vector-sized
     , xml-conduit
     , xml-types
   default-language: Haskell2010

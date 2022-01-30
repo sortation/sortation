@@ -11,27 +11,43 @@ executables:
 
 dependencies:
   - base >= 4.14 && < 5
+  - adjunctions
   - bytestring
   - conduit
   - conduit-concurrent-map
+  - containers
   - cryptohash-md5
   - cryptohash-sha1
   - digest
   - exceptions
+  - finite-typelits
   - generic-data
   - hex-text
   - largeword
+  - monad-control
+  - monad-logger
   - mtl
   - optics
   - optparse-applicative
   - pathtype
   - persistent
+  - persistent-mtl
+  - persistent-pagination
   - persistent-sqlite
-  - persistent-template
   - pretty-simple
+  - primitive
   - resourcet
+  - resource-pool
+  - template-haskell
   - text
+  - time
+  - transformers-base
   - unliftio-core
+  - unordered-containers
+  - uuid
+  - vector
+  - vector-algorithms
+  - vector-sized
   - xml-conduit
   - xml-types
 
@@ -54,6 +70,7 @@ default-extensions:
   - ConstraintKinds
   - DataKinds
   - DefaultSignatures
+  - DeriveAnyClass
   - DeriveFoldable
   - DeriveFunctor
   - DeriveGeneric
@@ -84,6 +101,7 @@ default-extensions:
   - PatternSynonyms
   - PolyKinds
   - QuantifiedConstraints
+  - QuasiQuotes
   - RankNTypes
   - RecordWildCards
   - RoleAnnotations

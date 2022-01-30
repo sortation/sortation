@@ -5,7 +5,6 @@ import Data.LargeWord
 import Data.Text (Text)
 import Data.Word
 import GHC.Generics
-import GHC.Natural
 import Optics
 
 data Header = Header
@@ -106,7 +105,7 @@ data BiosSet = BiosSet
 
 data Rom = Rom
   { name :: Text
-  , size :: Natural
+  , size :: Word
   , crc :: Maybe Word32
   , sha1 :: Maybe ByteString
   , md5 :: Maybe ByteString
