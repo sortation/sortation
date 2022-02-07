@@ -79,6 +79,7 @@ data Game = Game
   , rebuildTo :: Maybe Text
   , comments :: [Text]
   , description :: Text
+  , identifier :: Maybe Text
   , year :: Maybe Text
   , manufacturer :: Maybe Text
   , releases :: [Release]
@@ -111,6 +112,7 @@ data Rom = Rom
   , md5 :: Maybe ByteString
   , merge :: Maybe Text
   , status :: RomStatus
+  , serial :: Maybe Text
   , date :: Maybe Text
   } deriving (Generic, Show, Eq, Ord)
 

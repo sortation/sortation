@@ -1,5 +1,5 @@
-packages: *.cabal
+packages: sortation.cabal
 jobs: $ncpus
 
-package *
+package sortation
   optimization: 2

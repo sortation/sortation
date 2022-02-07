@@ -1,27 +1,31 @@
 module Sortation.Report.Text where
 
-import Control.Monad.Reader
+import Cleff
+import Cleff.Sql
 import Data.Conduit
 import Data.Conduit.Combinators qualified as Conduit
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Database.Persist.Pagination
-import Database.Persist.Sql
+import Database.Persist.Sql hiding (Sql)
 import Optics
 import Sortation.Persistent
 
+type PersistEntitySql a =
+  ( PersistEntity a
+  , PersistEntityBackend a ~ BaseBackend SqlBackend
+  )
+
 stream ::
-  ( MonadIO m
-  , PersistEntity a
-  , PersistQueryRead b
-  , PersistEntityBackend a ~ BaseBackend b
+  ( [Sql, IOE] :>> es
+  , PersistEntitySql a
   ) =>
   EntityField a (Key a) ->
   [Filter a] ->
-  ConduitT i (Entity a) (ReaderT b m) ()
+  ConduitT i (Entity a) (Eff es) ()
 stream field filters =
-  streamEntities
+  transPipe sql $ streamEntities
     filters
     field
     (PageSize 1)
@@ -37,9 +41,7 @@ releaseFilter gameId = Filter ReleaseParent (FilterValue gameId) Eq
 romFilter :: ReleaseId -> Filter Rom
 romFilter releaseId = Filter RomParent (FilterValue releaseId) Eq
 
-printCollections ::
-  MonadIO m =>
-  ReaderT SqlBackend m ()
+printCollections :: [Sql, IOE] :>> es => Eff es ()
 printCollections =
   runConduit $ stream CollectionId [] .| Conduit.mapM_ \collection -> do
     liftIO $ Text.putStrLn $ "COLLECTION: " <> collection ^. #entityVal % #name

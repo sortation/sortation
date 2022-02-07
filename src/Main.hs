@@ -1,34 +1,53 @@
 {-# options -fno-warn-orphans #-}
 module Main where
 
+import Cleff
+import Cleff.Mask
+import Cleff.Path
+import Cleff.Reader
+import Cleff.Sql
 import Control.Monad.Logger
 import Control.Monad.Primitive
-import Control.Monad.Reader
-import Data.Pool
-import Database.Persist.Monad
-import Database.Persist.Sqlite (withSqlitePool)
+import Control.Monad.Trans
+import Control.Monad.Trans.Resource
+import Data.Conduit
+import Data.Conduit.Combinators qualified as Conduit
+import Database.Persist.Sqlite
 import Optics
-import Options.Applicative
+import Options.Applicative (execParser)
 import Sortation.Config
+import Sortation.Ingest.Config qualified as Ingest
 import Sortation.Ingest.Dat
 import Sortation.Persistent
 import Sortation.Report.Text
+import System.Path as Path
+import System.Path.IO as Path
+import Text.Dat.Parse
+import Text.XML.Stream.Parse qualified as XML
 
-instance PrimMonad m => PrimMonad (SqlQueryT m) where
-  type PrimState (SqlQueryT m) = PrimState m
+instance PrimMonad m => PrimMonad (LoggingT m) where
+  type PrimState (LoggingT m) = PrimState m
   primitive = lift . primitive
 
-sqliteConnections :: Int
-sqliteConnections = 8
+instance PrimMonad m => PrimMonad (NoLoggingT m) where
+  type PrimState (NoLoggingT m) = PrimState m
+  primitive = lift . primitive
 
 main :: IO ()
-main =  do
-  config <- execParser optionsParser
-  runNoLoggingT $ withSqlitePool "db.sqlite" sqliteConnections \sql -> do
-    liftIO $ runSqlQueryT sql do
-      runMigration migrateAll
-      case config of
-        Check c -> do
-          (_, games) <- parseDatVec =<< parsePath (c ^. #globalConfig % #datFile)
-          void $ persistDat "test" games
-    withResource sql $ runReaderT printCollections
+main = do
+  command <- execParser configParserInfo
+  runIOE $ runMask $ runSilentSqliteConn "db.sqlite" do
+    sql $ runMigration migrateAll
+    case command of
+
+      Ingest config -> runReader config $
+        bracket
+          do liftIO . flip openFile ReadMode =<< normalizeFile (config ^. #datFile)
+          do liftIO . hClose
+          do
+            \handle -> runConduit $
+              Conduit.sourceHandle handle
+                .| XML.parseBytes XML.def
+                .| parseDat \_ -> persistDat "test"
+
+      Report -> printCollections

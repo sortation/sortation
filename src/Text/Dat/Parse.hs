@@ -147,6 +147,7 @@ parseGame =
     \GameAttrs { .. } -> do
       comments <- many (textTag "comment")
       description <- requireTextTag "description"
+      identifier <- textTag "game_id"
       year <- textTag "year"
       manufacturer <- textTag "manufacturer"
       releases <- many parseRelease
@@ -197,6 +198,7 @@ parseRom =
     md5 <- traverse parseHexByteString =<< attr "md5"
     merge <- attr "merge"
     status <- maybe (pure Good) parseRomStatus =<< attr "status"
+    serial <- attr "serial"
     date <- attr "date"
     pure Rom { .. }
 
