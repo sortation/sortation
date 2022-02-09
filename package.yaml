@@ -27,6 +27,7 @@ dependencies:
   - largeword
   - monad-control
   - monad-logger
+  - monad-loops
   - mtl
   - optics
   - optparse-applicative
@@ -36,8 +37,12 @@ dependencies:
   - persistent-sqlite
   - pretty-simple
   - primitive
+  - random
   - resourcet
   - resource-pool
+  - stm
+  - stm-chans
+  - stm-conduit
   - template-haskell
   - text
   - time

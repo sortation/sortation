@@ -6,6 +6,7 @@ import Cleff.Mask
 import Cleff.Path
 import Cleff.Reader
 import Cleff.Sql
+import Control.Monad
 import Control.Monad.Logger
 import Control.Monad.Primitive
 import Control.Monad.Trans
@@ -15,6 +16,7 @@ import Data.Conduit.Combinators qualified as Conduit
 import Database.Persist.Sqlite
 import Optics
 import Options.Applicative (execParser)
+import Sortation.Check
 import Sortation.Config
 import Sortation.Ingest.Config qualified as Ingest
 import Sortation.Ingest.Dat
@@ -48,6 +50,9 @@ main = do
             \handle -> runConduit $
               Conduit.sourceHandle handle
                 .| XML.parseBytes XML.def
-                .| parseDat \_ -> persistDat "test"
+                .| parseDat (const (pure ()))
+                .| persistDat
 
       Report -> printCollections
+
+      Check config -> runReader config checkCollection

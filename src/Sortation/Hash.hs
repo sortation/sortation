@@ -12,8 +12,13 @@ import Data.Digest.CRC32 as CRC32
 import Data.Word
 import Generic.Data
 import Optics
-import Sortation.Config
 import System.Path.IO
+
+data HashConfig = HashConfig
+  { crc :: Bool
+  , sha1 :: Bool
+  , md5 :: Bool
+  } deriving (Generic, Eq, Ord, Show)
 
 data HashState = HashState
   { crc :: Maybe Word32

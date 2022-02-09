@@ -1,6 +1,7 @@
 module Text.Dat.Parse where
 
 import Control.Monad.Catch
+import Control.Monad.Trans
 import Data.Conduit
 import Data.String
 import Data.Text qualified as Text
@@ -13,12 +14,12 @@ import Text.XML.Stream.Parse
 
 parseDat ::
   MonadThrow m =>
-  (Maybe Header -> ConduitT Game o m r) ->
-  ConduitT XML.Event o m r
-parseDat processDat =
+  (Maybe Header -> m ()) ->
+  ConduitT XML.Event Game m ()
+parseDat processHeader =
   force "datafile" $ tag' "datafile" ignoreAttrs \() -> do
-    header <- parseHeader
-    manyYield parseGame .| processDat header
+    lift . processHeader =<< parseHeader
+    manyYield parseGame -- .| processDat header
 
 data DatException
   = ParseError Text

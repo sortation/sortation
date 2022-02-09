@@ -7,10 +7,6 @@ import Cleff.Reader
 import Cleff.Sql
 import Control.Monad
 import Control.Monad.Trans
--- import Control.Monad.Reader
--- import Control.Monad.Primitive
--- import Control.Monad.Sql
--- import Control.Monad.Trans.Resource
 import Data.Conduit
 import Data.Conduit.Combinators qualified as Conduit
 import Data.Foldable
@@ -36,9 +32,9 @@ logText msg = do
 
 persistDat ::
   [Reader Config, Sql, IOE] :>> es =>
-  Text ->
   ConduitT Dat.Game o (Eff es) ()
-persistDat collectionName = do
+persistDat = do
+  collectionName <- lift $ peruse @Config #name
   collectionId <- lift $ sql $ insert Persistent.Collection
     { name = collectionName
     , parents = Set.empty
@@ -83,6 +79,7 @@ persistRom releaseId romPath rom = do
     , crc = rom ^. #crc
     , md5 = rom ^. #md5
     , sha1 = rom ^. #sha1
+    , lastCheck = Nothing
     }
   logText $ "added " <> (rom ^. #name) <> " with ID " <> Text.pack (show romId)
 

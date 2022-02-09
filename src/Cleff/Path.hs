@@ -25,17 +25,6 @@ relFile = Path.Generic.relFile . unpack
 relDir :: Path.Generic.System os => Text -> Path.Generic.RelDir os
 relDir = Path.Generic.relDir . unpack
 
--- data Path :: Effect where
---   Normalize ::
---     forall fd os m.
---     (Path.Generic.System os, Path.PartClass.FileDir fd) =>
---     Proxy# fd ->
---     Proxy# os ->
---     Text ->
---     Path m (Path.Generic.Abs os fd)
-
--- makeEffect ''Path
-
 normalize ::
   forall fd os m.
   ( MonadIO m
@@ -60,15 +49,3 @@ normalizeDir ::
   Text ->
   m (Path.Generic.AbsDir os)
 normalizeDir = normalize
-
--- newtype PathError = PathError { badPath :: Text }
---   deriving (Generic, Show, Eq, Ord)
-
--- runPathIO :: [Error PathError, IOE] :>> es => Eff (Path : es) ~> Eff es
--- runPathIO =
---   interpret \(Normalize (_ :: _ fd) (_ :: _ os) pathText) ->
---     fromExceptionVia
---       do \(_ :: SomeException) -> PathError pathText
---       do
---         liftIO $ Path.Generic.dynamicMakeAbsoluteFromCwd $
---           Path.Generic.absRel @os @fd $ unpack pathText

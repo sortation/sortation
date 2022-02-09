@@ -6,7 +6,8 @@ import Optics
 import Options.Applicative
 
 data Config = Config
-  { datFile :: Text
+  { name :: Text
+  , datFile :: Text
   , rootDir :: Text
   , hierarchy :: Hierarchy
   , verbose :: Bool
@@ -29,6 +30,12 @@ configParserInfo =
 
 configParser :: Parser Config
 configParser = do
+  name <-
+    strOption $ mconcat
+      [ long "name", short 'n'
+      , help "collection name"
+      , metavar "NAME"
+      ]
   rootDir <-
     strOption $ mconcat
       [ long "rom-directory", short 'd'
