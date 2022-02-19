@@ -12,10 +12,19 @@ import Data.Conduit.Concurrent
 import Data.Pool
 import Data.Set qualified as Set
 import Data.Text (Text)
+import Database.Esqueleto.Experimental hiding (Sql, (^.))
+import Database.Esqueleto.Experimental qualified as Esqueleto
 import Database.Persist.Pagination
 import Database.Persist.Sql hiding (Sql)
 import Database.Persist.Sqlite (withSqliteConn, withSqlitePool)
 import Sortation.Persistent
+
+(#.) ::
+  (PersistEntity a, PersistField b) =>
+  SqlExpr (Entity a) ->
+  EntityField a b ->
+  SqlExpr (Value b)
+(#.) = (Esqueleto.^.)
 
 data Sql :: Effect where
   Sql :: Mtl.ReaderT SqlBackend m a -> Sql m a

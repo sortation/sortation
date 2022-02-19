@@ -1,6 +1,9 @@
 module Sortation.Persistent.Rom where
 
 import Data.ByteString (ByteString)
+import Data.LanguageCodes
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Time.Clock
 import Data.Word
@@ -8,38 +11,25 @@ import Database.Persist
 import Database.Persist.Sql
 import Database.Persist.TH
 import GHC.Generics
+import Sortation.Format.Tags
 import Sortation.Persistent.Quasi
-import Sortation.Persistent.Release (ReleaseId)
-
-data RomStatus = RomStatus
-  { checkTime :: UTCTime
-  , existsCheck :: Bool
-  , sizeCheck :: Maybe Bool
-  , crcCheck :: Maybe Bool
-  , md5Check :: Maybe Bool
-  , sha1Check :: Maybe Bool
-  } deriving (Generic, Eq, Ord, Show, Read)
-
-derivePersistField "RomStatus"
-
-nonexistentRomStatus :: UTCTime -> RomStatus
-nonexistentRomStatus checkTime = RomStatus
-  { checkTime
-  , existsCheck = False
-  , sizeCheck = Just False
-  , crcCheck = Just False
-  , md5Check = Just False
-  , sha1Check = Just False
-  }
+import Sortation.Persistent.File (FileId)
 
 persist "Rom" [persistLowerCase|
   Rom
-    parent ReleaseId
     name Text
-    path Text
-    size Word
-    crc (Maybe Word32)
-    md5 (Maybe ByteString)
-    sha1 (Maybe ByteString)
-    lastCheck (Maybe RomStatus)
+    description Text
+    identifier (Maybe Text)
+    regions (Set Text)
+    languages (Set ISO639_1)
+    version (Maybe Version)
+    date (Maybe Text)
+    disc (Maybe Text)
+|]
+
+persist "RomFile" [persistLowerCase|
+  RomFile
+    rom RomId
+    file FileId
+    UniqueRomFile rom file
 |]

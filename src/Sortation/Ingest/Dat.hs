@@ -1,87 +1,150 @@
 module Sortation.Ingest.Dat where
 
 import Cleff
+import Cleff.Mask
 import Cleff.Optics
 import Cleff.Path
 import Cleff.Reader
 import Cleff.Sql
+import Control.Applicative
+import Control.Exception (Exception, throwIO)
 import Control.Monad
 import Control.Monad.Trans
+import Data.Attoparsec.Text
 import Data.Conduit
 import Data.Conduit.Combinators qualified as Conduit
+import Data.Conduit.Combinators qualified as Conduit
 import Data.Foldable
+import Data.Functor
+import Data.IORef
+import Data.Maybe
+import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
-import Data.Set qualified as Set
 import Data.Vector (Vector)
 import Database.Persist.Class
+import GHC.Generics
 import Optics
+import Sortation.Format.Dat qualified as Dat
+import Sortation.Format.Dat.Parse
+import Sortation.Format.NoIntro qualified as NoIntro
 import Sortation.Ingest.Config
 import Sortation.Persistent qualified as Persistent
 import System.Path ((</>))
 import System.Path qualified as Path
-import Text.Dat qualified as Dat
-import Text.Dat.Parse
+import System.Path.IO
 import Text.XML.Stream.Parse qualified as XML
+
+ingestDat ::
+  [Reader Config, Mask, Sql, IOE] :>> es =>
+  Eff es ()
+ingestDat = do
+  headerRef <- liftIO $ newIORef Nothing
+  bracket
+    do liftIO . flip openFile ReadMode =<< normalizeFile =<< peruse @Config #datFile
+    do liftIO . hClose
+    do
+      \handle -> runConduit $
+        Conduit.sourceHandle handle
+          .| XML.parseBytes XML.def
+          .| parseDat (liftIO . writeIORef headerRef)
+          .| (persistDat =<< liftIO (readIORef headerRef))
 
 logText :: [Reader Config, IOE] :>> es => Text -> Eff es ()
 logText msg = do
   verbose <- peruse @Config #verbose
   when verbose $ liftIO $ Text.putStrLn msg
 
+parseGroup :: Text -> Maybe Persistent.Group
+parseGroup "No-Intro" = Just Persistent.NoIntro
+parseGroup _ = Nothing
+
+groupNamingConvention :: Persistent.Group -> NamingConvention
+groupNamingConvention Persistent.NoIntro = NoIntro
+
 persistDat ::
   [Reader Config, Sql, IOE] :>> es =>
+  Maybe Dat.Header ->
   ConduitT Dat.Game o (Eff es) ()
-persistDat = do
-  collectionName <- lift $ peruse @Config #name
-  collectionId <- lift $ sql $ insert Persistent.Collection
-    { name = collectionName
-    , parents = Set.empty
-    }
-  lift $ logText $ "added " <> collectionName <> " with ID " <> Text.pack (show collectionId)
-  Conduit.mapM_ (persistGame collectionId)
+persistDat header = do
+  Config { .. } <- lift ask
+  let
+    (romSet, namingConvention) = case header of
+      Nothing ->
+        ( Persistent.emptyRomSet name rootDir & #datFile .~ Just datFile
+        , fromNamingConventionOption Nothing namingConventionOption
+        )
+      Just Dat.Header { .. } ->
+        let group = parseGroup =<< homepage in
+          ( Persistent.RomSet
+            { directory = rootDir
+            , description = Just description
+            , version = Just version
+            , author = Just author
+            , datFile = Just datFile
+            , ..
+            }
+          , fmap groupNamingConvention group
+          )
+  romSetId <- lift $ sql $ insert romSet
+  lift $ logText $ "added " <> name <> " with ID " <> Text.pack (show romSetId)
+  Conduit.mapM_ (persistRom romSetId namingConvention)
 
-persistGame ::
-  [Reader Config, Sql, IOE] :>> es =>
-  Persistent.CollectionId ->
+newtype TitleParsingError = TitleParsingError String
+  deriving (Generic, Eq, Ord, Show, Read)
+  deriving anyclass Exception
+
+parseDatGame ::
+  IOE :> es =>
+  Maybe NamingConvention ->
   Dat.Game ->
-  Eff es ()
-persistGame collectionId game = do
-  gameId <- sql $ insert Persistent.Game
-    { parents = Set.singleton collectionId
-    , name = game ^. #name
-    }
-  releaseId <- sql $ insert Persistent.Release
-    { parent = gameId
-    , region = Nothing
-    , language = Nothing
-    , version = Nothing
-    , date = Nothing
-    }
-  logText $ "added " <> (game ^. #name) <> " with ID " <> Text.pack (show gameId)
-  for_ (game ^. #roms) \rom -> do
-    romPath <- gameRomPath game (rom ^. #name)
-    persistRom releaseId romPath rom
+  Eff es Persistent.Rom
+parseDatGame namingConvention Dat.Game { .. } = do
+  case namingConvention of
+    Nothing -> pure Persistent.Rom
+      { regions = Set.empty
+      , languages = Set.empty
+      , version = Nothing
+      , date = Nothing
+      , disc = Nothing
+      , ..
+      }
+    Just NoIntro -> do
+      NoIntro.Title { .. } <-
+        either
+          do liftIO . throwIO . TitleParsingError
+          do pure
+          do parseOnly NoIntro.parseTitle name
+      pure Persistent.Rom
+        { date = Nothing
+        , ..
+        }
 
 persistRom ::
   [Reader Config, Sql, IOE] :>> es =>
-  Persistent.ReleaseId ->
-  Path.AbsFile ->
+  Persistent.RomSetId ->
+  Maybe NamingConvention ->
+  Dat.Game ->
+  Eff es ()
+persistRom romSetId namingConvention game = do
+  romId <- sql . insert =<< parseDatGame namingConvention game
+  sql $ insert_ $ Persistent.RomSetRom romSetId romId
+  logText $ "added " <> (game ^. #name) <> " with ID " <> Text.pack (show romId)
+  for_ (game ^. #roms) (persistFile romId)
+
+persistFile ::
+  [Reader Config, Sql, IOE] :>> es =>
+  Persistent.RomId ->
   Dat.Rom ->
   Eff es ()
-persistRom releaseId romPath rom = do
-  romId <- sql $ insert Persistent.Rom
-    { parent = releaseId
-    , name = rom ^. #name
-    , path = Text.pack $ Path.toString romPath
-    , size = rom ^. #size
-    , crc = rom ^. #crc
-    , md5 = rom ^. #md5
-    , sha1 = rom ^. #sha1
-    , lastCheck = Nothing
+persistFile romId Dat.Rom { .. } = do
+  fileId <- sql $ insert Persistent.File
+    { lastCheck = Nothing
+    , ..
     }
-  logText $ "added " <> (rom ^. #name) <> " with ID " <> Text.pack (show romId)
+  sql $ insert_ $ Persistent.RomFile romId fileId
+  logText $ "added " <> name <> " with ID " <> Text.pack (show fileId)
 
 gameRomPath ::
   [Reader Config, IOE] :>> es =>

@@ -16,7 +16,7 @@ import Data.Conduit.Combinators qualified as Conduit
 import Database.Persist.Sqlite
 import Optics
 import Options.Applicative (execParser)
-import Sortation.Check
+-- import Sortation.Check
 import Sortation.Config
 import Sortation.Ingest.Config qualified as Ingest
 import Sortation.Ingest.Dat
@@ -24,7 +24,7 @@ import Sortation.Persistent
 import Sortation.Report.Text
 import System.Path as Path
 import System.Path.IO as Path
-import Text.Dat.Parse
+import Sortation.Format.Dat.Parse
 import Text.XML.Stream.Parse qualified as XML
 
 instance PrimMonad m => PrimMonad (LoggingT m) where
@@ -41,18 +41,21 @@ main = do
   runIOE $ runMask $ runSilentSqliteConn "db.sqlite" do
     sql $ runMigration migrateAll
     case command of
+      Ingest config -> runReader config ingestDat
+      Report -> printRomSets
+      _ -> undefined
 
-      Ingest config -> runReader config $
-        bracket
-          do liftIO . flip openFile ReadMode =<< normalizeFile (config ^. #datFile)
-          do liftIO . hClose
-          do
-            \handle -> runConduit $
-              Conduit.sourceHandle handle
-                .| XML.parseBytes XML.def
-                .| parseDat (const (pure ()))
-                .| persistDat
+      -- Ingest config -> runReader config $
+      --   bracket
+      --     do liftIO . flip openFile ReadMode =<< normalizeFile (config ^. #datFile)
+      --     do liftIO . hClose
+      --     do
+      --       \handle -> runConduit $
+      --         Conduit.sourceHandle handle
+      --           .| XML.parseBytes XML.def
+      --           .| parseDat (const (pure ()))
+      --           .| persistDat
 
-      Report -> printCollections
+      -- Report -> printCollections
 
-      Check config -> runReader config checkCollection
+      -- Check config -> runReader config checkCollection

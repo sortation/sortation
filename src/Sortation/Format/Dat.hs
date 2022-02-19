@@ -1,4 +1,4 @@
-module Text.Dat where
+module Sortation.Format.Dat where
 
 import Data.ByteString (ByteString)
 import Data.LargeWord

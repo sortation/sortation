@@ -1,4 +1,4 @@
-module Text.Dat.Parse where
+module Sortation.Format.Dat.Parse where
 
 import Control.Monad.Catch
 import Control.Monad.Trans
@@ -7,7 +7,7 @@ import Data.String
 import Data.Text qualified as Text
 import Data.Text.Read qualified as Text
 import Data.XML.Types qualified as XML
-import Text.Dat
+import Sortation.Format.Dat
 import Text.Hex
 import Text.Read (readMaybe)
 import Text.XML.Stream.Parse
