@@ -19,7 +19,7 @@ parseDat ::
 parseDat processHeader =
   force "datafile" $ tag' "datafile" ignoreAttrs \() -> do
     lift . processHeader =<< parseHeader
-    manyYield parseGame -- .| processDat header
+    manyYield parseGame
 
 data DatException
   = ParseError Text

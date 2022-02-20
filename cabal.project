@@ -1,5 +1,15 @@
 packages: sortation.cabal
 jobs: $ncpus
 
+source-repository-package
+  type: git
+  location: https://github.com/haskell-effectful/effectful.git
+  subdir: effectful
+
+source-repository-package
+  type: git
+  location: https://github.com/haskell-effectful/effectful.git
+  subdir: effectful-core
+
 package sortation
   optimization: 2

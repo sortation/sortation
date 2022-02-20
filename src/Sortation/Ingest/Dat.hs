@@ -30,6 +30,7 @@ import Sortation.Format.Dat qualified as Dat
 import Sortation.Format.Dat.Parse
 import Sortation.Format.NoIntro qualified as NoIntro
 import Sortation.Ingest.Config
+import Sortation.Library qualified as Library
 import Sortation.Persistent qualified as Persistent
 import System.Path ((</>))
 import System.Path qualified as Path

@@ -15,9 +15,12 @@ executable sortation
   other-modules:
       Cleff.Optics
       Cleff.Path
+      Cleff.Resource
       Cleff.Sql
       Cleff.STM
+      Data.CasMap
       Data.Conduit.Concurrent
+      Effectful.Database
       Sortation.Check
       Sortation.Check.Config
       Sortation.Config
@@ -28,6 +31,8 @@ executable sortation
       Sortation.Hash
       Sortation.Ingest.Config
       Sortation.Ingest.Dat
+      Sortation.Ingest.Library
+      Sortation.Library
       Sortation.Persistent
       Sortation.Persistent.Collection
       Sortation.Persistent.File
@@ -95,23 +100,34 @@ executable sortation
       TypeOperators
       UndecidableInstances
       ViewPatterns
-  ghc-options: -fdefer-typed-holes -Wall -fno-warn-unused-imports -fno-warn-name-shadowing -fno-warn-orphans -Wcompat -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded
+  ghc-options: -fdefer-typed-holes -Wall -fno-warn-unused-imports -fno-warn-name-shadowing -fno-warn-unticked-promoted-constructors -fno-warn-orphans -Wcompat -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded
   build-depends:
       adjunctions
     , attoparsec
     , base >=4.14 && <5
     , bytestring
+    , cereal
+    , cereal-text
+    , cereal-vector
     , cleff
+    , compact
     , conduit
     , conduit-concurrent-map
+    , constraints
     , containers
     , cryptohash-md5
     , cryptohash-sha1
     , digest
+    , directory
+    , effectful
+    , effectful-core
     , esqueleto
     , exceptions
+    , filepath
     , finite-typelits
     , generic-data
+    , ghc-prim
+    , hashable
     , hex-text
     , iso-deriving
     , iso639
@@ -120,6 +136,7 @@ executable sortation
     , monad-logger
     , monad-loops
     , mtl
+    , natural-transformation
     , optics
     , optparse-applicative
     , pathtype
@@ -143,6 +160,7 @@ executable sortation
     , uuid
     , vector
     , vector-algorithms
+    , vector-instances
     , vector-sized
     , xml-conduit
     , xml-types

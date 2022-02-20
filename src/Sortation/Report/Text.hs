@@ -1,32 +1,47 @@
 module Sortation.Report.Text where
 
 import Cleff
+import Cleff.Mask
 import Cleff.Sql
+import Control.Monad
+import Control.Monad.Trans.Resource
+import Control.Monad.Trans
 import Data.Conduit
 import Data.Conduit.Combinators qualified as Conduit
 import Data.Foldable
+import Data.Function hiding (on)
+import Data.Functor
 import Data.List qualified as List
 import Data.Sequence (Seq, viewr, viewl, ViewR(..), ViewL(..))
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
-import Database.Esqueleto.Experimental hiding (Sql, (^.))
+import Database.Esqueleto.Experimental hiding (Sql, (^.), (%))
 import Database.Esqueleto.Pagination
 -- import Database.Persist.Sql hiding (Sql, (==.))
 import Optics hiding ((:>), (:<))
 import Sortation.Persistent
-import Text.Pretty.Simple
 
-romOutputOptions :: OutputOptions
-romOutputOptions =
-  defaultOutputOptionsNoColor
-    & #outputOptionsIndentAmount .~ 2
-    & #outputOptionsInitialIndent .~ 8
+-- romOutputOptions :: OutputOptions
+-- romOutputOptions =
+--   defaultOutputOptionsNoColor
+--     & #outputOptionsIndentAmount .~ 2
+--     -- & #outputOptionsInitialIndent .~ 8
+
+sinkFst ::
+  Eq a =>
+  (a -> Eff es ()) ->
+  ConduitT (a, b) b (Eff es) ()
+sinkFst f =
+  void $ flip Conduit.mapAccumWhileM Nothing \(x, y) x' ->
+    if Just x == x' then
+      pure $ Right (x', y)
+    else
+      f x $> Right (Just x, y)
 
 grouple :: (Foldable f, Eq a) => f (a, b) -> Seq (a, Seq b)
 grouple =
   let
-    -- go out [] = out
     go (viewr -> EmptyR) (x, y) = [(x, [y])]
     go (viewr -> out :> (x', ys)) (x, y) =
       if x == x' then
@@ -35,6 +50,63 @@ grouple =
         out |> (x', ys) |> (x, [y])
   in
     foldl' go []
+
+streamRomSets ::
+  [Sql, IOE] :>> es =>
+  ConduitT () (Entity RomSet) (Eff es) ()
+streamRomSets =
+  transPipe sql $ streamEntities
+    (const (val True))
+    RomSetId
+    (PageSize 1024)
+    Ascend
+    (Range Nothing Nothing)
+
+-- streamJoin ::
+--   [Sql, IOE] :>> es =>
+--   
+-- streamJoin = undefined
+
+streamRoms ::
+  [Sql, IOE] :>> es =>
+  ConduitT (Entity RomSet) (Entity Rom) (Eff es) ()
+streamRoms =
+  streamJoin @RomSet @RomSetRom @Rom
+    (PageSize 1024) (PageSize 1024)
+    (#romSet) (view #rom)
+
+streamFiles ::
+  [Sql, IOE] :>> es =>
+  ConduitT (Entity Rom) (Entity File) (Eff es) ()
+streamFiles =
+  streamJoin @Rom @RomFile @File
+    (PageSize 1024) (PageSize 1024)
+    (#rom) (view #file)
+
+fun :: [Sql, IOE] :>> es => Eff es ()
+fun = runConduit $ streamRomSets .| streamRoms .| streamFiles .| Conduit.mapM_ (liftIO . putStrLn . show)
+
+-- streamFiles ::
+--   [Sql, IOE] :>> es =>
+--   ConduitT () _ (Eff es) ()
+-- streamFiles =
+--   transPipe sql $ selectSource undefined
+
+libraryQuery :: SqlQuery (SqlExpr (Entity RomSet), (SqlExpr (Entity Rom), SqlExpr (Entity File)))
+libraryQuery = do
+  (romSet :& _ :& rom :& _ :& file) <-
+    from $
+      table @RomSet
+    `innerJoin` table @RomSetRom `on`
+      (\(romSet :& romSetRom) -> romSet #. #id ==. romSetRom #. #romSet)
+    `innerJoin` table @Rom `on`
+      (\(_ :& romSetRom :& rom) -> romSetRom #. #rom ==. rom #. #id)
+    `innerJoin` table @RomFile `on`
+      (\(_ :& _ :& rom :& romFile) -> rom #. #id ==. romFile #. #rom)
+    `innerJoin` table @File `on`
+      (\(_ :& _ :& _ :& romFile :& file) -> romFile #. #file ==. file #. #id)
+  orderBy [asc (romSet #. #name), asc (rom #. #name), asc (file #. #name)]
+  pure (romSet, (rom, file))
 
 selectRomSets ::
   [Sql, IOE] :>> es =>
@@ -52,12 +124,12 @@ selectRomSets =
         (\(_ :& _ :& rom :& romFile) -> rom #. #id ==. romFile #. #rom)
       `innerJoin` table @File `on`
         (\(_ :& _ :& _ :& romFile :& file) -> romFile #. #file ==. file #. #id)
-    orderBy [ asc (romSet #. #name), asc (rom #. #name), asc (file #. #name) ]
+    orderBy [asc (romSet #. #name), asc (rom #. #name), asc (file #. #name)]
     pure (romSet, (rom, file))
 
-printRomSets :: [Sql, IOE] :>> es => Eff es ()
-printRomSets =
-  liftIO . pPrintOpt NoCheckColorTty romOutputOptions =<< selectRomSets
+-- printRomSets :: [Sql, IOE] :>> es => Eff es ()
+-- printRomSets =
+--   liftIO . pPrintOpt NoCheckColorTty romOutputOptions =<< selectRomSets
 
 -- printCollections :: [Sql, IOE] :>> es => Eff es ()
 -- printCollections =
