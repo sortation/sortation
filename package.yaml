@@ -29,6 +29,7 @@ executables:
       - effectful
       - exceptions
       - filepath
+      - ghc-prim
       - hashable
       - hex-text
       - iso639

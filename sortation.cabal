@@ -84,6 +84,7 @@ executable sortation
     , effectful-core
     , exceptions
     , filepath
+    , ghc-prim
     , hashable
     , hex-text
     , iso639
