@@ -1,22 +1,12 @@
 module Effectful.Database where
 
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TVar
-import Control.Monad.Catch
-import Control.Natural
-import Data.ByteString (ByteString)
 import Data.ByteString qualified as ByteString
 import Data.CasMap (CasMap, CasKey)
 import Data.CasMap qualified as CasMap
 import Data.Hashable
-import Data.Kind
 import Data.Serialize
-import Effectful
+import Data.Vector qualified as Vector
 import Effectful.Dispatch.Static
-import GHC.Generics
-import GHC.Prim
-import GHC.TypeLits
-import Optics
 import System.Directory
 import System.FilePath
 
@@ -30,16 +20,23 @@ type instance BackendFileName (path :: Symbol) = path
 type HasBackend :: forall k. k -> Constraint
 class Serialize (Backend db) => HasBackend db where
   type Backend db :: Type
-  type TableOpticKind db :: OpticKind
+  type BackendOpticKind db :: OpticKind
   newBackend :: Backend db
 
+type ReadableDatabase :: forall k. k -> Constraint
+type ReadableDatabase db = Is (BackendOpticKind db) A_Getter
+
+type ModifiableDatabase :: forall k. k -> Constraint
+type ModifiableDatabase db = (ReadableDatabase db, Is (BackendOpticKind db) A_Setter)
+
 class (HasBackend db, Hashable a) => HasTable db a where
-  tableOptic :: Optic' (TableOpticKind db) NoIx (Backend db) (CasMap db a)
+  tableOptic :: Optic' (BackendOpticKind db) NoIx (Backend db) (CasMap db a)
 
 data Database :: forall k. k -> Effect
 
 type instance DispatchOf (Database db) = Static WithSideEffects
 newtype instance StaticRep (Database db) = Database { backendVar :: TVar (Backend db) }
+  deriving Generic
 
 newtype DatabaseDeserializationError = DatabaseDeserializationError { message :: String }
   deriving stock (Generic, Eq, Ord, Show, Read)
@@ -65,14 +62,13 @@ runDatabase dir m = do
 insert ::
   forall db a es.
   ( Database db :> es
-  , Is (TableOpticKind db) A_Getter
-  , Is (TableOpticKind db) A_Setter
+  , ModifiableDatabase db
   , HasTable db a
   ) =>
   a -> Eff es (Key db a)
 insert x = do
-  backendVar <- fmap backendVar $ getStaticRep @(Database db)
-  map <- fmap (view tableOptic) $ unsafeEff_ $ atomically $ readTVar backendVar
+  backendVar <- fmap (.backendVar) $ getStaticRep @(Database db)
+  map <- fmap (view tableOptic) $ unsafeEff_ $ readTVarIO backendVar
   let (key, map') = CasMap.insert map x
   unsafeEff_ $ atomically $ modifyTVar' backendVar (tableOptic .~ map')
   pure key
@@ -80,11 +76,23 @@ insert x = do
 index ::
   forall db a es.
   ( Database db :> es
-  , Is (TableOpticKind db) A_Getter
+  , ReadableDatabase db
   , HasTable db a
   ) =>
   Key db a -> Eff es a
 index i = do
-  backendVar <- fmap backendVar $ getStaticRep @(Database db)
+  backendVar <- fmap (.backendVar) $ getStaticRep @(Database db)
   map <- fmap (view tableOptic) $ unsafeEff_ $ atomically $ readTVar backendVar
   pure $ CasMap.index map i
+
+tableVector ::
+  forall db a es.
+  ( Database db :> es
+  , ReadableDatabase db
+  , HasTable db a
+  ) =>
+  Eff es (Vector a)
+tableVector = do
+  backendVar <- fmap (.backendVar) $ getStaticRep @(Database db)
+  map <- fmap (view (tableOptic @db)) $ unsafeEff_ $ readTVarIO backendVar
+  pure $ Vector.fromListN (length map) $ toList map

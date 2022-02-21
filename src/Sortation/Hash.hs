@@ -1,18 +1,9 @@
 module Sortation.Hash where
 
-import Control.Monad
-import Control.Monad.IO.Class
 import Crypto.Hash.MD5 qualified as MD5
 import Crypto.Hash.SHA1 qualified as SHA1
-import Data.ByteString (ByteString)
 import Data.ByteString qualified as ByteString
-import Data.Conduit
-import Data.Conduit.Combinators qualified as Conduit
 import Data.Digest.CRC32 as CRC32
-import Data.Word
-import Generic.Data
-import Optics
-import System.Path.IO
 
 data HashConfig = HashConfig
   { crc :: Bool
@@ -32,11 +23,11 @@ data Hash = Hash
   , md5 :: Maybe ByteString
   } deriving (Generic, Eq)
 
-hashFile :: MonadIO m => HashConfig -> Handle -> ConduitT i o m Hash
-hashFile config h = 
-  fmap finalizeHashState $
-    Conduit.sourceHandle h .|
-      Conduit.foldl updateHashState (initHashState config)
+-- hashFile :: MonadIO m => HashConfig -> Handle -> ConduitT i o m Hash
+-- hashFile config h = 
+--   fmap finalizeHashState $
+--     Conduit.sourceHandle h .|
+--       Conduit.foldl updateHashState (initHashState config)
 
 initHashState :: HashConfig -> HashState
 initHashState config =

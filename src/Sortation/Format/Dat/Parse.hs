@@ -1,164 +1,164 @@
 module Sortation.Format.Dat.Parse where
 
-import Control.Monad.Catch
-import Control.Monad.Trans
-import Data.Conduit
-import Data.String
-import Data.Text qualified as Text
+import Data.Map qualified as Map
+import Data.Vector qualified as Vector
 import Data.Text.Read qualified as Text
-import Data.XML.Types qualified as XML
+import Effectful.Consume
 import Sortation.Format.Dat
-import Text.Hex
-import Text.Read (readMaybe)
-import Text.XML.Stream.Parse
+import Text.Hex (decodeHex)
+import Text.XML qualified as XML
 
-parseDat ::
-  MonadThrow m =>
-  (Maybe Header -> m ()) ->
-  ConduitT XML.Event Game m ()
-parseDat processHeader =
-  force "datafile" $ tag' "datafile" ignoreAttrs \() -> do
-    lift . processHeader =<< parseHeader
-    manyYield parseGame
+makeFieldLabels ''XML.Document
+makeFieldLabels ''XML.Prologue
+makeFieldLabels ''XML.Instruction
+makePrisms ''XML.Miscellaneous
+makePrisms ''XML.Node
+makeFieldLabels ''XML.Element
+makeFieldLabels ''XML.Name
+makeFieldLabels ''XML.Doctype
+makePrisms ''XML.ExternalID
 
-data DatException
-  = ParseError Text
-  deriving (Show, Eq, Ord)
+data DatParseError = DatParseError { message :: Text }
+  deriving (Generic, Exception, Show, Read, Eq, Ord)
 
-instance Exception DatException
+readDat :: IOE :> es => FilePath -> Eff es Dat
+readDat path = do
+  doc <- liftIO (XML.readFile XML.def path)
+  runConsume (Identity doc.root) parseDat
 
-parseHex :: forall a m. (MonadThrow m, Integral a) => Text -> m a
+type Attr = (XML.Name, Text)
+
+parseDat :: Eff (Consume XML.Element : es) Dat
+parseDat = do
+  datafile <- requireTag "datafile"
+  runConsume (datafile ^.. (#nodes % traversed % _NodeElement)) do
+    header <- parseHeader
+    games <- Vector.fromList <$> unfoldM parseGame
+    pure Dat { .. }
+
+parseHex :: forall a es. Integral a => Text -> Eff es a
 parseHex text =
   case Text.hexadecimal text of
-    Left err -> throwM $ ParseError $ Text.pack err
+    Left err -> throwM $ DatParseError $ pack err
     Right (x, "") -> pure x
-    Right (_, rest) -> throwM $ ParseError ("unexpected end of input: " <> rest)
+    Right (_, rest) -> throwM $ DatParseError ("unexpected end of input: " <> rest)
 
-parseHexByteString :: MonadThrow m => Text -> m ByteString
+parseHexByteString :: Text -> Eff es ByteString
 parseHexByteString text =
   case decodeHex text of
-    Nothing -> throwM $ ParseError "bad hex string"
+    Nothing -> throwM $ DatParseError "bad hex string"
     Just x -> pure x
 
-emptyTag :: MonadThrow m => NameMatcher a -> AttrParser b -> ConduitT XML.Event o m (Maybe b)
-emptyTag name attrParser = tag' name attrParser pure
-
-textTag :: MonadThrow m => String -> ConduitT XML.Event o m (Maybe Text)
-textTag tagName = tag' (fromString tagName) ignoreAttrs \() -> content
-
-requireTextTag :: MonadThrow m => String -> ConduitT XML.Event o m Text
-requireTextTag tagName = force tagName $ textTag tagName
-
-parseHeader :: MonadThrow m => ConduitT XML.Event o m (Maybe Header)
-parseHeader =
-  tag' "header" ignoreAttrs \() -> do
+parseHeader :: Eff (Consume XML.Element : es) (Maybe Header)
+parseHeader = do
+  optionTag "header" >>= traverse \node -> runConsume (node ^.. #nodes % traversed % _NodeElement) do
     name <- requireTextTag "name"
     description <- requireTextTag "description"
-    category <- textTag "category"
+    category <- optionTextTag "category"
     version <- requireTextTag "version"
-    date <- textTag "date"
+    date <- optionTextTag "date"
     author <- requireTextTag "author"
-    email <- textTag "email"
-    homepage <- textTag "homepage"
-    url <- textTag "url"
-    comment <- textTag "comment"
+    email <- optionTextTag "email"
+    homepage <- optionTextTag "homepage"
+    url <- optionTextTag "url"
+    comment <- optionTextTag "comment"
     clrMamePro <- parseClrMameProHeader
     romCenter <- parseRomCenterHeader
     pure Header { .. }
 
-parseClrMameProHeader :: MonadThrow m => ConduitT XML.Event o m (Maybe ClrMameProHeader)
+parseClrMameProHeader :: Eff (Consume XML.Element : es) (Maybe ClrMameProHeader)
 parseClrMameProHeader =
-  emptyTag "clrmamepro" do
-    header <- attr "header"
-    forceMerging <- maybe (pure SplitMerge) parseMergeType =<< attr "forcemerging"
-    forceNoDump <- maybe (pure Obsolete) parseNoDumpType =<< attr "forcenodump"
-    forcePacking <- maybe (pure Zip) parsePackingType =<< attr "forcepacking"
+  optionEmptyTag "clrmamepro" do
+    forceMerging <- maybe (pure SplitMerge) parseMergeType =<< optionAttr "forcemerging"
+    forceNoDump <- maybe (pure Obsolete) parseNoDumpType =<< optionAttr "forcenodump"
+    forcePacking <- maybe (pure Zip) parsePackingType =<< optionAttr "forcepacking"
+    header <- optionAttr "header"
     pure ClrMameProHeader { .. }
 
-parseRomCenterHeader :: MonadThrow m => ConduitT XML.Event o m (Maybe RomCenterHeader)
+parseRomCenterHeader :: Eff (Consume XML.Element : es) (Maybe RomCenterHeader)
 parseRomCenterHeader =
-  emptyTag "romcenter" do
-    plugin <- attr "plugin"
-    romMode <- maybe (pure Split) parseRomSetType =<< attr "rommode"
-    biosMode <- maybe (pure Split) parseRomSetType =<< attr "biosmode"
-    sampleMode <- maybe (pure MergedSamples) parseSampleSetType =<< attr "samplemode"
-    lockRomMode <- maybe (pure False) parseYesNo =<< attr "lockrommode"
-    lockBiosMode <- maybe (pure False) parseYesNo =<< attr "lockbiosmode"
-    lockSampleMode <- maybe (pure False) parseYesNo =<< attr "locksamplemode"
+  optionEmptyTag "romcenter" do
+    biosMode <- maybe (pure Split) parseRomSetType =<< optionAttr "biosmode"
+    lockBiosMode <- maybe (pure False) parseYesNo =<< optionAttr "lockbiosmode"
+    lockRomMode <- maybe (pure False) parseYesNo =<< optionAttr "lockrommode"
+    lockSampleMode <- maybe (pure False) parseYesNo =<< optionAttr "locksamplemode"
+    plugin <- optionAttr "plugin"
+    romMode <- maybe (pure Split) parseRomSetType =<< optionAttr "rommode"
+    sampleMode <- maybe (pure MergedSamples) parseSampleSetType =<< optionAttr "samplemode"
     pure RomCenterHeader { .. }
 
-parseMergeType :: MonadThrow m => Text -> m MergeType
+parseMergeType :: Text -> Eff es MergeType
 parseMergeType input =
   case input of
     "none" -> pure NoMerge
     "split" -> pure SplitMerge
     "full" -> pure FullMerge
-    _ -> throwM $ ParseError ("invalid forcemerging: " <> input)
+    _ -> throwM $ DatParseError ("invalid forcemerging: " <> input)
 
-parseNoDumpType :: MonadThrow m => Text -> m NoDumpType
+parseNoDumpType :: Text -> Eff es NoDumpType
 parseNoDumpType input =
   case input of
     "obsolete" -> pure Obsolete
     "required" -> pure Required
     "ignore" -> pure Ignore
-    _ -> throwM $ ParseError ("invalid forcenodump: " <> input)
+    _ -> throwM $ DatParseError ("invalid forcenodump: " <> input)
 
-parsePackingType :: MonadThrow m => Text -> m PackingType
+parsePackingType :: Text -> Eff es PackingType
 parsePackingType input =
   case input of
     "zip" -> pure Zip
     "unzip" -> pure Unzip
-    _ -> throwM $ ParseError ("invalid forcepacking: " <> input)
+    _ -> throwM $ DatParseError ("invalid forcepacking: " <> input)
 
-parseRomSetType :: MonadThrow m => Text -> m RomSetType
+parseRomSetType :: Text -> Eff es RomSetType
 parseRomSetType input =
   case input of
     "merged" -> pure Merged
     "split" -> pure Split
     "unmerged" -> pure Unmerged
-    _ -> throwM $ ParseError ("invalid rommode/biosmode: " <> input)
+    _ -> throwM $ DatParseError ("invalid rommode/biosmode: " <> input)
 
-parseSampleSetType :: MonadThrow m => Text -> m SampleSetType
+parseSampleSetType :: Text -> Eff es SampleSetType
 parseSampleSetType input =
   case input of
     "merged" -> pure MergedSamples
     "unmerged" -> pure UnmergedSamples
-    _ -> throwM $ ParseError ("invalid samplemode: " <> input)
+    _ -> throwM $ DatParseError ("invalid samplemode: " <> input)
 
-parseYesNo :: MonadThrow m => Text -> m Bool
+parseYesNo :: Text -> Eff es Bool
 parseYesNo input =
   case input of
     "yes" -> pure True
     "no" -> pure False
-    _ -> throwM $ ParseError ("invalid yes/no value: " <> input)
+    _ -> throwM $ DatParseError ("invalid yes/no value: " <> input)
 
-parseGame :: MonadThrow m => ConduitT XML.Event o m (Maybe Game)
+parseGame :: Eff (Consume XML.Element : es) (Maybe Game)
 parseGame =
-  tag' "game"
-    do
-      name <- requireAttr "name"
-      sourceFile <- attr "sourcefile"
-      isBios <- (maybe (pure False) parseYesNo =<< attr "isbios")
-      cloneOf <- attr "cloneof"
-      romOf <- attr "romof"
-      sampleOf <- attr "sampleof"
-      board <- attr "board"
-      rebuildTo <- attr "rebuildto"
-      pure GameAttrs { .. }
-    \GameAttrs { .. } -> do
-      comments <- many (textTag "comment")
+  optionTag "game" >>= traverse \node -> do
+    GameAttrs { .. } <-
+      runConsume (node & itoListOf (#attributes % itraversed)) do
+        board <- optionAttr "board"
+        cloneOf <- optionAttr "cloneof"
+        isBios <- (maybe (pure False) parseYesNo =<< optionAttr "isbios")
+        name <- requireAttr "name"
+        rebuildTo <- optionAttr "rebuildto"
+        romOf <- optionAttr "romof"
+        sampleOf <- optionAttr "sampleof"
+        sourceFile <- optionAttr "sourcefile"
+        pure GameAttrs { .. }
+    runConsume (node ^.. #nodes % traversed % _NodeElement) do
+      comments <- fmap Vector.fromList $ unfoldM $ optionTextTag "comment"
       description <- requireTextTag "description"
-      identifier <- textTag "game_id"
-      year <- textTag "year"
-      manufacturer <- textTag "manufacturer"
-      releases <- many parseRelease
-      biosSets <- many parseBiosSet
-      roms <- many parseRom
-      disks <- many parseDisk
-      samples <- many parseSample
-      archives <- many parseArchive
+      identifier <- optionTextTag "game_id"
+      year <- optionTextTag "year"
+      manufacturer <- optionTextTag "manufacturer"
+      releases <- fmap Vector.fromList $ unfoldM parseRelease
+      biosSets <- fmap Vector.fromList $ unfoldM parseBiosSet
+      roms <- fmap Vector.fromList $ unfoldM parseRom
+      disks <- fmap Vector.fromList $ unfoldM parseDisk
+      samples <- fmap Vector.fromList $ unfoldM parseSample
+      archives <- fmap Vector.fromList $ unfoldM parseArchive
       pure Game { .. }
-  where
 
 data GameAttrs = GameAttrs
   { name :: Text
@@ -171,65 +171,123 @@ data GameAttrs = GameAttrs
   , rebuildTo :: Maybe Text
   }
 
-parseRelease :: MonadThrow m => ConduitT XML.Event o m (Maybe Release)
+parseRelease :: Eff (Consume XML.Element : es) (Maybe Release)
 parseRelease =
-  emptyTag "release" do
+  optionEmptyTag "release" do
+    date <- optionAttr "date"
+    language <- optionAttr "language"
     name <- requireAttr "name"
     region <- requireAttr "region"
-    language <- attr "language"
-    date <- attr "date"
-    _default <- maybe (pure False) parseYesNo =<< attr "_default"
+    _default <- maybe (pure False) parseYesNo =<< optionAttr "default"
     pure Release { .. }
 
-parseBiosSet :: MonadThrow m => ConduitT XML.Event o m (Maybe BiosSet)
+parseBiosSet :: Eff (Consume XML.Element : es) (Maybe BiosSet)
 parseBiosSet =
-  emptyTag "biosset" do
-    name <- requireAttr "name"
+  optionEmptyTag "biosset" do
+    _default <- maybe (pure False) parseYesNo =<< optionAttr "default"
     description <- requireAttr "description"
-    _default <- maybe (pure False) parseYesNo =<< attr "_default"
+    name <- requireAttr "name"
     pure BiosSet { .. }
 
-parseRom :: MonadThrow m => ConduitT XML.Event o m (Maybe Rom)
+parseRom :: Eff (Consume XML.Element : es) (Maybe Rom)
 parseRom =
-  emptyTag "rom" do
+  optionEmptyTag "rom" do
+    crc <- traverse parseHex =<< optionAttr "crc"
+    date <- optionAttr "date"
+    md5 <- traverse parseHexByteString =<< optionAttr "md5"
+    merge <- optionAttr "merge"
     name <- requireAttr "name"
-    size <- force "size" $ readMaybe . Text.unpack <$> requireAttr "size"
-    crc <- traverse parseHex =<< attr "crc"
-    sha1 <- traverse parseHexByteString =<< attr "sha1"
-    md5 <- traverse parseHexByteString =<< attr "md5"
-    merge <- attr "merge"
-    status <- maybe (pure Good) parseRomStatus =<< attr "status"
-    serial <- attr "serial"
-    date <- attr "date"
+    serial <- optionAttr "serial"
+    sha1 <- traverse parseHexByteString =<< optionAttr "sha1"
+    size <- read . unpack <$> requireAttr "size"
+    status <- maybe (pure Good) parseRomStatus =<< optionAttr "status"
     pure Rom { .. }
 
-parseDisk :: MonadThrow m => ConduitT XML.Event o m (Maybe Disk)
+parseDisk :: Eff (Consume XML.Element : es) (Maybe Disk)
 parseDisk =
-  emptyTag "disk" do
+  optionEmptyTag "biosset" do
+    md5 <- traverse parseHex =<< optionAttr "md5"
+    merge <- optionAttr "merge"
     name <- requireAttr "name"
-    sha1 <- traverse parseHex =<< attr "sha1"
-    md5 <- traverse parseHex =<< attr "md5"
-    merge <- attr "merge"
-    status <- maybe (pure Good) parseRomStatus =<< attr "status"
+    sha1 <- traverse parseHex =<< optionAttr "sha1"
+    status <- maybe (pure Good) parseRomStatus =<< optionAttr "status"
     pure Disk { .. }
 
-parseRomStatus :: MonadThrow m => Text -> m RomStatus
+parseRomStatus :: Text -> Eff es RomStatus
 parseRomStatus input =
   case input of
     "baddump" -> pure BadDump
     "nodump" -> pure NoDump
     "good" -> pure Good
     "verified" -> pure Verified
-    _ -> throwM $ ParseError ("invalid status: " <> input)
+    _ -> throwM $ DatParseError ("invalid status: " <> input)
 
-parseSample :: MonadThrow m => ConduitT XML.Event o m (Maybe Sample)
+parseSample :: Eff (Consume XML.Element : es) (Maybe Sample)
 parseSample =
-  emptyTag "sample" do
+  optionEmptyTag "sample" do
     name <- requireAttr "name"
     pure Sample { .. }
 
-parseArchive :: MonadThrow m => ConduitT XML.Event o m (Maybe Archive)
+parseArchive :: Eff (Consume XML.Element : es) (Maybe Archive)
 parseArchive =
-  emptyTag "archive" do
+  optionEmptyTag "archive" do
     name <- requireAttr "name"
     pure Archive { .. }
+
+requireTag :: Consume XML.Element :> es => Text -> Eff es XML.Element
+requireTag expected =
+  consume @XML.Element >>= \case
+    Nothing -> throwM $ DatParseError ("expected tag " <> expected)
+    Just node ->
+      if node.name.localName == expected then
+        pure node
+      else
+        throwM $ DatParseError ("expected tag " <> expected <> ", got " <> node.name.localName)
+
+requireTextTag :: Consume XML.Element :> es => Text -> Eff es Text
+requireTextTag expected =
+  toListOf (#nodes % traversed) <$> requireTag expected >>= \case
+    [XML.NodeContent text] -> pure text
+    tags -> throwM $ DatParseError ("expected text, got " <> pack (show tags))
+
+optionTag :: Consume XML.Element :> es => Text -> Eff es (Maybe XML.Element)
+optionTag expected =
+  peek >>= \case
+    Just node | node.name.localName == expected -> consume @XML.Element $> Just node
+    _ -> pure Nothing
+
+optionEmptyTag :: Consume XML.Element :> es => Text -> Eff (Consume Attr : es) a -> Eff es (Maybe a)
+optionEmptyTag expected m =
+  optionTag expected >>= traverse \element -> do
+    runConsume element.nodes $ assertEnd @XML.Node
+    runConsume (Map.toList element.attributes) m
+
+optionTextTag :: Consume XML.Element :> es => Text -> Eff es (Maybe Text)
+optionTextTag expected =
+  fmap (toListOf (#nodes % traversed)) <$> optionTag expected >>= \case
+    Nothing -> pure Nothing
+    Just [XML.NodeContent text] -> pure $ Just text
+    Just tags -> throwM $ DatParseError ("expected text, got " <> pack (show tags))
+
+requireAttr :: Consume Attr :> es => Text -> Eff es Text
+requireAttr expected =
+  consume @Attr >>= \case
+    Nothing -> throwM $ DatParseError ("expected attr " <> expected)
+    Just (optionAttr, value) ->
+      if optionAttr.localName == expected then
+        pure value
+      else
+        throwM $ DatParseError ("expected attr " <> expected <> ", got " <> optionAttr.localName)
+
+optionAttr :: Consume Attr :> es => Text -> Eff es (Maybe Text)
+optionAttr expected =
+  peek @Attr >>= \case
+    Just (optionAttr, value) | optionAttr.localName == expected -> consume @Attr $> Just value
+    _ -> pure Nothing
+
+assertEnd :: forall a es. (Show a, Consume a :> es) => Eff es ()
+assertEnd =
+  consume @a >>= \case
+    Nothing -> pure ()
+    Just x ->
+      throwM $ DatParseError ("expected end, got " <> pack (show x))

@@ -1,21 +1,13 @@
 module Sortation.Format.NoIntro where
 
-import Control.Applicative
-import Control.Monad.Loops
 import Data.Attoparsec.Text
 import Data.Char
-import Data.Fixed
-import Data.Foldable
-import Data.Functor
 import Data.LanguageCodes
 import Data.List qualified as List
-import Data.Sequence (Seq, ViewR(..), viewr)
+import Data.Sequence (ViewR(..), viewr)
 import Data.Sequence qualified as Seq
-import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.Text (Text, pack, unpack)
 import Data.Text qualified as Text
-import GHC.Generics
 import Sortation.Format.Tags
 
 data Title = Title
@@ -23,6 +15,7 @@ data Title = Title
   , article :: Maybe Text
   , subtitles :: [Text]
   , bios :: Bool
+  , titleId :: Maybe Text
   , regions :: Set Text
   , languages :: Set ISO639_1
   , version :: Maybe Version
@@ -38,6 +31,7 @@ parseTitle = do
   bios <- option False ("[BIOS] " $> True)
   (name, article) <- parseTitleName
   subtitles <- many (" - " *> parseSubtitle)
+  titleId <- optional (" (" *> takeWhile1 isHexDigit <* ")")
   regions <- Set.fromList <$> (" (" *> sepBy1 parseWord ", " <* ")")
   languages <-
     option Set.empty $ Set.fromList <$>

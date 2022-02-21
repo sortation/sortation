@@ -10,18 +10,16 @@ executables:
     source-dirs: src
 
     dependencies:
-      - base >= 4.14 && < 5
-      - adjunctions
+      - name: base
+        version: ">= 4.14 && < 5"
+        mixin:
+          - (Prelude as BasePrelude)
+          - hiding (Prelude)
       - attoparsec
       - bytestring
       - cereal
       - cereal-text
       - cereal-vector
-      - cleff
-      - compact
-      - conduit
-      - conduit-concurrent-map
-      - constraints
       - containers
       - cryptohash-md5
       - cryptohash-sha1
@@ -29,54 +27,31 @@ executables:
       - directory
       - effectful-core
       - effectful
-      - esqueleto
       - exceptions
       - filepath
-      - finite-typelits
-      - generic-data
-      - ghc-prim
       - hashable
       - hex-text
       - iso639
-      - iso-deriving
       - largeword
-      - monad-control
-      - monad-logger
       - monad-loops
-      - mtl
       - natural-transformation
       - optics
       - optparse-applicative
-      - pathtype
-      - persistent
-      - persistent-pagination
-      - persistent-sqlite
       - pretty-simple
-      - primitive
-      - random
-      - resourcet
-      - resource-pool
       - stm
       - stm-chans
-      - stm-conduit
-      - template-haskell
       - text
       - time
       - transformers-base
-      - unliftio-core
-      - unordered-containers
       - uuid
       - vector
       - vector-algorithms
       - vector-instances
-      - vector-sized
       - xml-conduit
-      - xml-types
 
     ghc-options:
       - -fdefer-typed-holes
       - -Wall
-      - -fno-warn-unused-imports
       - -fno-warn-name-shadowing
       - -fno-warn-unticked-promoted-constructors
       - -fno-warn-orphans
@@ -89,57 +64,39 @@ executables:
       - -threaded
 
     default-extensions:
+      - GHC2021
+
+      - RebindableSyntax
+      - ImplicitPrelude
+
       - AllowAmbiguousTypes
       - ApplicativeDo
-      - BangPatterns
       - BlockArguments
-      - ConstraintKinds
       - DataKinds
       - DefaultSignatures
       - DeriveAnyClass
-      - DeriveFoldable
-      - DeriveFunctor
-      - DeriveGeneric
-      - DeriveLift
-      - DeriveTraversable
       - DerivingStrategies
       - DerivingVia
       - DuplicateRecordFields
-      - EmptyCase
-      - ExistentialQuantification
-      - FlexibleContexts
-      - FlexibleInstances
       - FunctionalDependencies
       - GADTs
-      - GeneralizedNewtypeDeriving
-      - ImportQualifiedPost
-      - InstanceSigs
-      - KindSignatures
       - LambdaCase
       - MagicHash
-      - MultiParamTypeClasses
       - MultiWayIf
-      - NamedFieldPuns
+      - NoFieldSelectors
       - NoStarIsType
       - OverloadedLabels
       - OverloadedLists
+      - OverloadedRecordDot
       - OverloadedStrings
       - PartialTypeSignatures
       - PatternSynonyms
-      - PolyKinds
       - QuantifiedConstraints
       - QuasiQuotes
-      - RankNTypes
       - RecordWildCards
       - RoleAnnotations
-      - ScopedTypeVariables
-      - StandaloneDeriving
-      - StandaloneKindSignatures
       - TemplateHaskell
-      - TupleSections
-      - TypeApplications
       - TypeFamilies
       - TypeFamilyDependencies
-      - TypeOperators
       - UndecidableInstances
       - ViewPatterns

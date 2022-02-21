@@ -1,39 +1,28 @@
 module Sortation.Check where
 
-import Cleff
-import Cleff.Optics
-import Cleff.Reader
-import Cleff.Sql
-import Control.Applicative
-import Control.Monad
-import Control.Monad.IO.Unlift
-import Data.ByteString (ByteString)
-import Data.Conduit
-import Data.Conduit.Combinators qualified as Conduit
-import Data.Conduit.Concurrent
-import Data.Conduit.Lift
-import Data.Foldable
-import Data.Functor
-import Data.List qualified as List
-import Data.Maybe
-import Data.Monoid
-import Data.Text (Text, unpack)
-import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
-import Data.Text.Lazy qualified as Text (toStrict)
-import Data.Text.IO qualified as Text
-import Data.Time.Clock
-import Data.Traversable
-import Database.Persist.Class
-import Database.Persist.Sql hiding (Sql)
-import Optics
-import Sortation.Check.Config
-import Sortation.Hash
-import Sortation.Persistent
-import System.Path (absFile)
-import System.Path qualified as Path
-import System.Path.Directory
-import System.Path.IO
+-- import Control.Applicative
+-- import Control.Monad
+-- import Control.Monad.IO.Unlift
+-- import Data.ByteString (ByteString)
+-- import Data.Conduit
+-- import Data.Conduit.Combinators qualified as Conduit
+-- import Data.Conduit.Concurrent
+-- import Data.Conduit.Lift
+-- import Data.Foldable
+-- import Data.Functor
+-- import Data.List qualified as List
+-- import Data.Maybe
+-- import Data.Monoid
+-- import Data.Text (Text, unpack)
+-- import Data.Text qualified as Text
+-- import Data.Text.Encoding qualified as Text
+-- import Data.Text.Lazy qualified as Text (toStrict)
+-- import Data.Text.IO qualified as Text
+-- import Data.Time.Clock
+-- import Data.Traversable
+-- import Optics
+-- import Sortation.Check.Config
+-- import Sortation.Hash
 
 -- checkCollection :: [Reader Config, Sql, IOE] :>> es => Eff es ()
 -- checkCollection = do

@@ -1,11 +1,11 @@
 module Sortation.Format.Dat where
 
-import Data.ByteString (ByteString)
 import Data.LargeWord
-import Data.Text (Text)
-import Data.Word
-import GHC.Generics
-import Optics
+
+data Dat = Dat
+  { header :: Maybe Header
+  , games :: Vector Game
+  } deriving (Generic, Show, Eq, Ord)
 
 data Header = Header
   { name :: Text
@@ -77,17 +77,17 @@ data Game = Game
   , sampleOf :: Maybe Text
   , board :: Maybe Text
   , rebuildTo :: Maybe Text
-  , comments :: [Text]
+  , comments :: Vector Text
   , description :: Text
   , identifier :: Maybe Text
   , year :: Maybe Text
   , manufacturer :: Maybe Text
-  , releases :: [Release]
-  , biosSets :: [BiosSet]
-  , roms :: [Rom]
-  , disks :: [Disk]
-  , samples :: [Sample]
-  , archives :: [Archive]
+  , releases :: Vector Release
+  , biosSets :: Vector BiosSet
+  , roms :: Vector Rom
+  , disks :: Vector Disk
+  , samples :: Vector Sample
+  , archives :: Vector Archive
   } deriving (Generic, Show, Eq, Ord)
 
 data Release = Release

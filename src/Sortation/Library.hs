@@ -1,28 +1,15 @@
 module Sortation.Library where
 
-import Data.ByteString (ByteString)
-import Data.CasMap (CasKey, CasMap)
+import Data.CasMap (CasMap)
 import Data.CasMap qualified as CasMap
-import Data.Kind
 import Data.Time.Clock
 import Data.LanguageCodes
 import Data.Hashable
-import Data.Maybe
 import Data.Serialize
 import Data.Serialize.Text ()
-import Data.Set (Set)
-import Data.Set qualified as Set
-import Data.Text (Text)
-import Data.Vector (Vector)
-import Data.Vector qualified as Vector
 import Data.Vector.Instances ()
 import Data.Vector.Serialize ()
-import Data.Word
 import Effectful.Database
-import Optics
-import GHC.Generics
-import GHC.TypeLits
-import Text.Read (readMaybe)
 
 data Library :: forall k. k -> Type
 
@@ -30,8 +17,8 @@ type instance BackendFileName (Library db) = AppendSymbol "library-" (BackendFil
 
 type LibraryBackend :: forall k. k -> Type
 data LibraryBackend db = LibraryBackend
-  { romSets :: CasMap (Library db) (RomSet (Key (Library db) (Rom (Key (Library db) File))))
-  , roms :: CasMap (Library db) (Rom (Key (Library db) File))
+  { romSets :: CasMap (Library db) (RomSet db)
+  , roms :: CasMap (Library db) (Rom db)
   , files :: CasMap (Library db) File
   }
   deriving stock (Generic, Eq, Ord, Show, Read)
@@ -39,17 +26,17 @@ data LibraryBackend db = LibraryBackend
 
 instance HasBackend (Library db) where
   type Backend (Library db) = LibraryBackend db
-  type TableOpticKind (Library db) = A_Lens
+  type BackendOpticKind (Library db) = A_Lens
   newBackend = LibraryBackend
     { romSets = CasMap.empty
     , roms = CasMap.empty
     , files = CasMap.empty
     }
 
-instance HasTable (Library db) (RomSet (Key (Library db) (Rom (Key (Library db) File)))) where
+instance HasTable (Library db) (RomSet db) where
   tableOptic = #romSets
 
-instance HasTable (Library db) (Rom (Key (Library db) File)) where
+instance HasTable (Library db) (Rom db) where
   tableOptic = #roms
 
 instance HasTable (Library db) File where
@@ -63,7 +50,7 @@ data Group
   deriving stock (Generic, Eq, Ord, Show, Read)
   deriving anyclass (Hashable, Serialize)
 
-data RomSet rom = RomSet
+data RomSet db = RomSet
   { name :: Text
   , directory :: FilePath
   , description :: Maybe Text
@@ -76,12 +63,12 @@ data RomSet rom = RomSet
   , group :: Maybe Group
   , url :: Maybe Text
   , comment :: Maybe Text
-  , roms :: Vector rom
+  , roms :: Vector (Key (Library db) (Rom db))
   }
-  deriving stock (Generic, Eq, Ord, Show, Read, Functor, Foldable, Traversable)
+  deriving stock (Generic, Eq, Ord, Show, Read)
   deriving anyclass (Hashable, Serialize)
 
-emptyRomSet :: Text -> FilePath -> RomSet rom
+emptyRomSet :: Text -> FilePath -> RomSet db
 emptyRomSet name dir = RomSet
   { name = name
   , directory = dir
@@ -98,7 +85,7 @@ emptyRomSet name dir = RomSet
   , roms = []
   }
 
-data Rom file = Rom
+data Rom db = Rom
   { name :: Text
   , description :: Text
   , identifier :: Maybe Text
@@ -107,9 +94,9 @@ data Rom file = Rom
   , version :: Maybe Text
   , date :: Maybe Text
   , disc :: Maybe Text
-  , files :: Vector file
+  , files :: Vector (Key (Library db) File)
   }
-  deriving stock (Generic, Eq, Ord, Show, Read, Functor, Foldable, Traversable)
+  deriving stock (Generic, Eq, Ord, Show, Read)
   deriving anyclass (Hashable, Serialize)
 
 data FileStatus = FileStatus

@@ -1,7 +1,5 @@
 module Sortation.Check.Config where
 
-import Data.Text (Text)
-import GHC.Generics
 import Options.Applicative
 import Sortation.Hash
 

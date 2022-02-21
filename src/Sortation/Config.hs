@@ -1,6 +1,5 @@
 module Sortation.Config where
 
-import GHC.Generics
 import Options.Applicative
 import Sortation.Ingest.Config qualified as Ingest
 import Sortation.Check.Config qualified as Check

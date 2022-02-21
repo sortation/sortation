@@ -1,25 +1,14 @@
 module Sortation.Format.Tags where
 
-import Control.Applicative
-import Control.Monad.Loops
 import Data.Attoparsec.Text
 import Data.Char
 import Data.LanguageCodes
-import Data.Text (Text)
-import Database.Persist
-import Database.Persist.Sql
-import Database.Persist.TH
-import GHC.Generics
 
 data Version = VersionNumber (Maybe ISO639_1) Text | Revision Text
   deriving (Generic, Eq, Ord, Show, Read)
 
 data DevStatus = Beta Word | Proto | Sample
   deriving (Generic, Eq, Ord, Show, Read)
-
-derivePersistField "ISO639_1"
-derivePersistField "Version"
-derivePersistField "DevStatus"
 
 parseISO639_1 :: Parser ISO639_1
 parseISO639_1 =

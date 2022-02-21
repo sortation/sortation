@@ -1,7 +1,7 @@
 module Data.CasMap
   ( CasMap
   , CasKey
-  , empty
+  , Data.CasMap.empty
   , insert
   , insertAll
   , index
@@ -9,25 +9,21 @@ module Data.CasMap
   )
   where
 
-import Data.Foldable
 import Data.Hashable
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IntMap
-import Data.Kind
 import Data.Serialize
-import GHC.Exts
-import GHC.Generics
 
 type CasMap :: forall k. k -> Type -> Type
 newtype CasMap l a = CasMap (IntMap a)
   deriving newtype (Hashable, Serialize, Semigroup, Monoid, Eq, Ord, Show, Read)
 
-instance Functor (CasMap l) where
-  fmap f (CasMap m) = CasMap (IntMap.map f m)
-
 instance Foldable (CasMap l) where
   foldr f x (CasMap m) = IntMap.foldr' f x m
   foldl f x (CasMap m) = IntMap.foldl' f x m
+  null (CasMap m) = null m
+  length (CasMap m) = length m
+  elem x (CasMap m) = elem x m
 
 type CasKey :: forall k. k -> Type -> Type
 newtype CasKey l a = CasKey Int
@@ -44,7 +40,7 @@ insertAll :: forall l a t. (Hashable a, Foldable t) => CasMap l a -> t a -> ([Ca
 insertAll m =
   foldl'
     (\(keys, map) x -> let (key, map') = insert map x in (key:keys, map'))
-    ([], empty)
+    ([], m)
 
 index :: forall l a. CasMap l a -> CasKey l a -> a
 index (CasMap m) (CasKey i) = m IntMap.! i

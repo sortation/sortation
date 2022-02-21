@@ -1,15 +1,11 @@
 module Sortation.Ingest.Config where
 
-import Data.Text (Text)
-import GHC.Generics
-import Optics
-import Optics.TH
 import Options.Applicative
 
 data Config = Config
   { name :: Text
-  , datFile :: Text
-  , rootDir :: Text
+  , datFile :: FilePath
+  , rootDir :: FilePath
   , namingConventionOption :: NamingConventionOption
   , hierarchy :: Hierarchy
   , verbose :: Bool
