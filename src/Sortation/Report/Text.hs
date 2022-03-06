@@ -8,11 +8,11 @@ reportLibrary ::
   [Database (Library db), IOE] :>> es =>
   Eff es ()
 reportLibrary =
-  tableVector @(Library db) @(RomSet db) >>= traverse_ \romSet -> do
+  selectAll @(Library db) @(RomSet db) >>= traverse_ \romSet -> do
     liftIO $ putStrLn $ "ROMSET: " <> romSet.name
-    traverse index romSet.roms >>= traverse_ \rom -> do
+    traverse select romSet.roms >>= traverse_ \rom -> do
       liftIO $ putStrLn $ "  ROM: " <> rom.name
-      traverse index rom.files >>= traverse_ \file -> do
+      traverse select rom.files >>= traverse_ \file -> do
         liftIO $ putStrLn $ "    FILE: " <> file.name
         pPrintOpt NoCheckColorTty fileOutputOptions file
 

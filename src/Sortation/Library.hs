@@ -1,10 +1,9 @@
 module Sortation.Library where
 
-import Data.CasMap (CasMap)
-import Data.CasMap qualified as CasMap
+import Data.IntMap.Strict (IntMap)
+import Data.IntMap.Strict qualified as IntMap
 import Data.Time.Clock
 import Data.LanguageCodes
-import Data.Hashable
 import Data.Serialize
 import Data.Serialize.Text ()
 import Data.Vector.Instances ()
@@ -15,22 +14,22 @@ data Library :: forall k. k -> Type
 
 type instance BackendFileName (Library db) = AppendSymbol "library-" (BackendFileName db)
 
-type LibraryBackend :: forall k. k -> Type
-data LibraryBackend db = LibraryBackend
-  { romSets :: CasMap (Library db) (RomSet db)
-  , roms :: CasMap (Library db) (Rom db)
-  , files :: CasMap (Library db) File
-  }
-  deriving stock (Generic, Eq, Ord, Show, Read)
-  deriving anyclass Serialize
 
 instance HasBackend (Library db) where
-  type Backend (Library db) = LibraryBackend db
+  -- type LibraryBackend :: forall k. k -> Type
+  data Backend (Library db) = LibraryBackend
+    { romSets :: IntMap (RomSet db)
+    , roms :: IntMap (Rom db)
+    , files :: IntMap File
+    }
+    deriving stock (Generic, Eq, Ord, Show, Read)
+    deriving anyclass Serialize
+
   type BackendOpticKind (Library db) = A_Lens
   newBackend = LibraryBackend
-    { romSets = CasMap.empty
-    , roms = CasMap.empty
-    , files = CasMap.empty
+    { romSets = IntMap.empty
+    , roms = IntMap.empty
+    , files = IntMap.empty
     }
 
 instance HasTable (Library db) (RomSet db) where
@@ -42,13 +41,10 @@ instance HasTable (Library db) (Rom db) where
 instance HasTable (Library db) File where
   tableOptic = #files
 
-instance Hashable ISO639_1 where
-  hashWithSalt salt = hashWithSalt salt . toChars
-
 data Group
   = NoIntro
   deriving stock (Generic, Eq, Ord, Show, Read)
-  deriving anyclass (Hashable, Serialize)
+  deriving anyclass Serialize
 
 data RomSet db = RomSet
   { name :: Text
@@ -66,7 +62,7 @@ data RomSet db = RomSet
   , roms :: Vector (Key (Library db) (Rom db))
   }
   deriving stock (Generic, Eq, Ord, Show, Read)
-  deriving anyclass (Hashable, Serialize)
+  deriving anyclass Serialize
 
 emptyRomSet :: Text -> FilePath -> RomSet db
 emptyRomSet name dir = RomSet
@@ -97,7 +93,7 @@ data Rom db = Rom
   , files :: Vector (Key (Library db) File)
   }
   deriving stock (Generic, Eq, Ord, Show, Read)
-  deriving anyclass (Hashable, Serialize)
+  deriving anyclass Serialize
 
 data FileStatus = FileStatus
   { checkTime :: UTCTime
@@ -108,7 +104,7 @@ data FileStatus = FileStatus
   , sha1Check :: Maybe Bool
   }
   deriving stock (Generic, Eq, Ord, Show, Read)
-  deriving anyclass (Hashable, Serialize)
+  deriving anyclass Serialize
 
 nonexistentFileStatus :: UTCTime -> FileStatus
 nonexistentFileStatus checkTime = FileStatus
@@ -129,10 +125,7 @@ data File = File
   , lastCheck :: Maybe FileStatus
   }
   deriving stock (Generic, Eq, Ord, Show, Read)
-  deriving anyclass (Hashable, Serialize)
-
-instance Hashable UTCTime where
-  hashWithSalt salt = hashWithSalt salt . show
+  deriving anyclass Serialize
 
 instance Serialize UTCTime where
   put = put . show

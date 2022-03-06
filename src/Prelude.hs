@@ -9,17 +9,23 @@ module Prelude
   , module Control.Monad.IO.Class
   , module Control.Monad.Loops
   , module Control.Natural
+  , module Data.Bifunctor
   , module Data.Bool
   , module Data.ByteString
+  , module Data.Coerce
   , module Data.Foldable
   , module Data.Functor
   , module Data.Functor.Identity
   , module Data.Kind
   , module Data.Map
+  , module Data.Maybe
   , module Data.Set
   , module Data.Text
   , module Data.Text.IO
+  , module Data.Traversable
   , module Data.Vector
+  , module Data.Vinyl.FromTuple
+  , module Data.Vinyl.Notation
   , module Data.Word
   , module Effectful
   , module Effectful.Reader.Static
@@ -55,18 +61,24 @@ import Control.Monad.Catch
 import Control.Monad.IO.Class
 import Control.Monad.Loops
 import Control.Natural (type (~>))
+import Data.Bifunctor
 import Data.Bool
 import Data.ByteString (ByteString)
+import Data.Coerce
 import Data.Foldable
 import Data.Functor
 import Data.Functor.Identity
 import Data.Kind
 import Data.Map (Map)
+import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import Data.String
 import Data.Text (Text, pack, unpack)
 import Data.Text.IO
+import Data.Traversable
 import Data.Vector (Vector)
+import Data.Vinyl.FromTuple
+import Data.Vinyl.Notation
 import Data.Word
 import Effectful
 import Effectful.Reader.Static

@@ -13,7 +13,6 @@ build-type:     Simple
 executable sortation
   main-is: Main.hs
   other-modules:
-      Data.CasMap
       Effectful.Consume
       Effectful.Database
       Prelude
@@ -62,12 +61,13 @@ executable sortation
       QuasiQuotes
       RecordWildCards
       RoleAnnotations
+      StrictData
       TemplateHaskell
       TypeFamilies
       TypeFamilyDependencies
       UndecidableInstances
       ViewPatterns
-  ghc-options: -fdefer-typed-holes -Wall -fno-warn-name-shadowing -fno-warn-unticked-promoted-constructors -fno-warn-orphans -Wcompat -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -threaded
+  ghc-options: -fdefer-typed-holes -Wall -fno-warn-name-shadowing -fno-warn-unticked-promoted-constructors -fno-warn-orphans -Wcompat -Wincomplete-patterns -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -funbox-strict-fields -threaded
   build-depends:
       attoparsec
     , base >=4.14 && <5
@@ -103,6 +103,7 @@ executable sortation
     , vector
     , vector-algorithms
     , vector-instances
+    , vinyl
     , xml-conduit
   mixins:
       base (Prelude as BasePrelude)

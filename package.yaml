@@ -48,6 +48,7 @@ executables:
       - vector
       - vector-algorithms
       - vector-instances
+      - vinyl
       - xml-conduit
 
     ghc-options:
@@ -62,6 +63,7 @@ executables:
       - -Wincomplete-uni-patterns
       - -Wredundant-constraints
       - -O2
+      - -funbox-strict-fields
       - -threaded
 
     default-extensions:
@@ -96,6 +98,7 @@ executables:
       - QuasiQuotes
       - RecordWildCards
       - RoleAnnotations
+      - StrictData
       - TemplateHaskell
       - TypeFamilies
       - TypeFamilyDependencies
